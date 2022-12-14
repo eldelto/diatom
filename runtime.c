@@ -1,28 +1,31 @@
+#include <stdio.h>
+
 #define STACK_SIZE (10)
+typedef long int word;
 
 /* Stacks */
 typedef struct {
-  unsigned int pointer;
-  int data[STACK_SIZE];
+  word pointer;
+  word data[STACK_SIZE];
 } stack;
 
-static void stack_push(stack* s, int value) {
-  const unsigned int index = s->pointer++ % STACK_SIZE;
+static void stack_push(stack* s, word value) {
+  const word index = s->pointer++ % STACK_SIZE;
   s->data[index] = value;
 }
 
-static int stack_pop(stack* s) {
-  const unsigned int index = --s->pointer % STACK_SIZE;
+static word stack_pop(stack* s) {
+  const word index = --s->pointer % STACK_SIZE;
   return s->data[index];
 }
 
-static int stack_peek(stack* s) {
-  const unsigned int index = (s->pointer - 1) % STACK_SIZE;
+static word stack_peek(stack* s) {
+  const word index = (s->pointer - 1) % STACK_SIZE;
   return s->data[index];
 }
 
 /* VM State */
-unsigned int instruction_pointer = 0;
+word instruction_pointer = 0;
 
 stack* data_stack = &(stack) {
   .pointer = 0,
@@ -32,7 +35,7 @@ stack* call_stack = &(stack) {
   .pointer = 0,
 };
 
-int memory[100];
+word memory[100];
 
 /* Instructions */
 static inline void _next(void) {
@@ -42,18 +45,12 @@ static inline void _next(void) {
 }
 
 static void _nest(void) {
-  stack_push(call_stack, instruction_pointer);
-  instruction_pointer = memory[instruction_pointer];
 }
 
 static void _call_native(void) {
-  stack_push(call_stack, instruction_pointer);
-  ((void (*)(void))instruction_pointer)();
 }
 
-static void _return(void) {
-  instruction_pointer = stack_pop(call_stack);
-  _next();
+static void _unnest(void) {
 }
 
 static void _add(void) {
@@ -65,28 +62,43 @@ static void _fetch(void) {
 }
 
 static void _store(void) {
-  const int value = stack_pop(data_stack);
+  const word value = stack_pop(data_stack);
   memory[stack_pop(data_stack)] = value;
 }
 
-int main(void) {
+static void test(void) {
+  puts("test!");
+}
 
-next:
-  instruction_pointer = memory[instruction_pointer];
-  ++instruction_pointer;
-  const int code_segment = memory[instruction_pointer];
-  if (code_segment == _next) {
-    goto next;
-  }
-  // Native code call
-  ((void (*)(void))memory[instruction_pointer])();
+int main(void) {
+  word code_segment;
+
+  memory[0] = (word)test;
+  memory[1] = (word)_next;
+  goto next;
 
 nest:
   stack_push(call_stack, instruction_pointer);
   instruction_pointer = memory[instruction_pointer];
   goto next;
 
+unnest:
+  instruction_pointer = stack_pop(call_stack);
+  goto next;
 
+next:
+  code_segment = memory[instruction_pointer];
+  ++instruction_pointer;
+  if (code_segment == (word)_next) {
+    goto next;
+  } else if (code_segment == (word)_nest) {
+    goto nest;
+  } else if (code_segment == (word)_unnest) {
+    goto unnest;
+  }
+  // Native code call
+  ((void (*)(void))code_segment)();
+  goto next;
 
   return 0;
 }
