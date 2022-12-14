@@ -1,3 +1,3 @@
-cilia: cilia.o
+runtime: runtime.o
 
-cilia.o: cilia.c
+runtime.o: runtime.c
