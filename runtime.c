@@ -66,6 +66,7 @@ static void _store(void) {
   memory[stack_pop(data_stack)] = value;
 }
 
+// TODO: Remove
 static void test(void) {
   puts("test!");
 }
@@ -91,9 +92,11 @@ next:
   ++instruction_pointer;
   if (code_segment == (word)_next) {
     goto next;
-  } else if (code_segment == (word)_nest) {
+  }
+  else if (code_segment == (word)_nest) {
     goto nest;
-  } else if (code_segment == (word)_unnest) {
+  }
+  else if (code_segment == (word)_unnest) {
     goto unnest;
   }
   // Native code call
