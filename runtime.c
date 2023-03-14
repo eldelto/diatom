@@ -1,107 +1,121 @@
 #include <stdio.h>
+#include <stdbool.h>
 
-#define STACK_SIZE (10)
-typedef long int word;
+#define STACK_SIZE  10
+#define MEMORY_SIZE 100
+typedef int word;
 
 /* Stacks */
-typedef struct {
+struct stack {
   word pointer;
   word data[STACK_SIZE];
-} stack;
+};
 
-static void stack_push(stack* s, word value) {
+// TODO: Abort if index is out of bounds
+
+inline static void stack_push(struct stack* s, word value) {
   const word index = s->pointer++ % STACK_SIZE;
   s->data[index] = value;
 }
 
-static word stack_pop(stack* s) {
+inline static word stack_pop(struct stack* s) {
   const word index = --s->pointer % STACK_SIZE;
   return s->data[index];
 }
 
-static word stack_peek(stack* s) {
+inline static word stack_peek(struct stack* s) {
   const word index = (s->pointer - 1) % STACK_SIZE;
   return s->data[index];
 }
 
+/* Instructions */
+enum instructions {
+  FETCH,
+  STORE,
+  EXIT,
+  ADD,
+  SUBTRACT,
+  MULTIPLY,
+  DIVIDE,
+  CONST,
+};
+
 /* VM State */
 word instruction_pointer = 0;
 
-stack* data_stack = &(stack) {
+struct stack* data_stack = &(struct stack) {
   .pointer = 0,
+    .data = { 0 },
 };
 
-stack* call_stack = &(stack) {
+struct stack* call_stack = &(struct stack) {
   .pointer = 0,
+    .data = { 0 },
 };
 
-word memory[100];
-
-/* Instructions */
-static inline void _next(void) {
-  instruction_pointer = memory[instruction_pointer];
-  ++instruction_pointer;
-  ((void (*)(void))instruction_pointer)();
-}
-
-static void _nest(void) {
-}
-
-static void _call_native(void) {
-}
-
-static void _unnest(void) {
-}
-
-static void _add(void) {
-  stack_push(data_stack, stack_pop(data_stack) + stack_pop(data_stack));
-}
-
-static void _fetch(void) {
-  stack_push(data_stack, memory[stack_pop(data_stack)]);
-}
-
-static void _store(void) {
-  const word value = stack_pop(data_stack);
-  memory[stack_pop(data_stack)] = value;
-}
-
-// TODO: Remove
-static void test(void) {
-  puts("test!");
-}
+word memory[MEMORY_SIZE] = {
+  CONST,
+  10,
+  CONST,
+  5,
+  ADD,
+  EXIT,
+};
 
 int main(void) {
-  word code_segment;
 
-  memory[0] = (word)test;
-  memory[1] = (word)_next;
-  goto next;
+  while (instruction_pointer < MEMORY_SIZE) {
+    const word instruction = memory[instruction_pointer];
 
-nest:
-  stack_push(call_stack, instruction_pointer);
-  instruction_pointer = memory[instruction_pointer];
-  goto next;
+    switch (instruction) {
+    case FETCH: {
+      const word address = stack_pop(data_stack);
+      stack_push(data_stack, memory[address]);
+      break;
+    }
+    case STORE: {
+      const word address = stack_pop(data_stack);
+      memory[address] = stack_pop(data_stack);
+      break;
+    }
+    case EXIT: {
+      puts("VM exited normally");
+      return 0;
+    }
+    case ADD: {
+      stack_push(data_stack, stack_pop(data_stack) + stack_pop(data_stack));
+      break;
+    }
+    case SUBTRACT: {
+      const word value = stack_pop(data_stack);
+      stack_push(data_stack, value - stack_pop(data_stack));
+      break;
+    }
+    case MULTIPLY: {
+      stack_push(data_stack, stack_pop(data_stack) * stack_pop(data_stack));
+      break;
+    }
+    case DIVIDE: {
+      const word value = stack_pop(data_stack);
+      stack_push(data_stack, value / stack_pop(data_stack));
+      break;
+    }
+    case CONST: {
+      ++instruction_pointer;
+      const word value = memory[instruction_pointer];
+      stack_push(data_stack, value);
+      break;
+    }
+    default: {
+      printf("Unknown instruction at memory location %d - aborting.", instruction_pointer);
+      return -1;
+    }
+    }
 
-unnest:
-  instruction_pointer = stack_pop(call_stack);
-  goto next;
+    printf("data stack -> %d\n", stack_peek(data_stack));
 
-next:
-  code_segment = memory[instruction_pointer];
-  ++instruction_pointer;
-  if (code_segment == (word)_next) {
-    goto next;
+    ++instruction_pointer;
   }
-  else if (code_segment == (word)_nest) {
-    goto nest;
-  }
-  else if (code_segment == (word)_unnest) {
-    goto unnest;
-  }
-  // Native code call
-  ((void (*)(void))code_segment)();
-  goto next;
 
   return 0;
 }
