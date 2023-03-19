@@ -60,6 +60,7 @@ word memory[MEMORY_SIZE] = {
   5,
   ADD,
   EXIT,
+  // NEXT: Increment instruction_pointer and set it to the current memory content
 };
 
 int main(void) {
