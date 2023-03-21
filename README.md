@@ -1,22 +1,22 @@
 
 # Table of Contents
 
-1.  [Diatom](#org6443b16)
-    1.  [Dictionary Layout](#org169d2fd)
-    2.  [Preamble](#org29ceb5b)
-    3.  [Performance](#orgde839f1)
-    4.  [Portability](#org1c0a799)
-    5.  [Assembler](#org9e8c080)
+1.  [Diatom](#org450e06b)
+    1.  [Dictionary Layout](#orgb40a98a)
+    2.  [Preamble](#org046e56a)
+    3.  [Performance](#org3062a75)
+    4.  [Portability](#org99a8aa6)
+    5.  [Assembler](#org37df4f2)
 
 
-<a id="org6443b16"></a>
+<a id="org450e06b"></a>
 
 # Diatom
 
 A Forth dialect that focuses on portability and simplicity.
 
 
-<a id="org169d2fd"></a>
+<a id="orgb40a98a"></a>
 
 ## Dictionary Layout
 
@@ -62,7 +62,7 @@ A Forth dialect that focuses on portability and simplicity.
 </table>
 
 
-<a id="org29ceb5b"></a>
+<a id="org046e56a"></a>
 
 ## Preamble
 
@@ -75,7 +75,7 @@ executed:
 -   Execute main word (default = REPL but overwritable)
 
 
-<a id="orgde839f1"></a>
+<a id="org3062a75"></a>
 
 ## Performance
 
@@ -96,7 +96,7 @@ just using another language but by applying different design
 principles that focus on the core functionality.
 
 
-<a id="org1c0a799"></a>
+<a id="org99a8aa6"></a>
 
 ## Portability
 
@@ -112,18 +112,30 @@ implementation because additional custom software (e.g. assembler)
 is needed for bootstrapping.
 
 
-<a id="org9e8c080"></a>
+<a id="org37df4f2"></a>
 
 ## Assembler
 
--   [ ] Decide if it is easier to write the virtual machine code by
-    hand or implement a simple assembler to resolve the memory
-    locations of the labels.
+A very simplistic assembler is needed that can replace label
+references with their actual memory location.
 
-    dp:
-    	const
-    	0
+Input:
+
     double:
-    	@dup	
+    	dup	
     	add
+    quadruple:
+    	@double
+    	@double
+
+Output:
+
+    dup
+    add
+    const
+    0
+    next
+    const
+    0
+    next
 
