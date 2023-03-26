@@ -4,12 +4,15 @@ CC := gcc
 CFLAGS  := -Wall -Werror -Wextra -pedantic-errors -std=c99 -MMD -MP
 
 .PHONY: all
-all: bin bin/runtime
+all: bin bin/runtime bin/assembler
 
 bin:
 	mkdir bin
 
 bin/runtime: runtime.o
+	$(CC) $^ -o $@ $(LDFLAGS)
+
+bin/assembler: assembler.o
 	$(CC) $^ -o $@ $(LDFLAGS)
 
 .PHONY: clean

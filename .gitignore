@@ -2,3 +2,4 @@ cilia
 runtime
 *.o
 *.d
+bin
