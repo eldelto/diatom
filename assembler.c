@@ -52,17 +52,24 @@ static const struct label* find_label(
   return NULL;
 }
 
-static void generate_output_filename(char* input_filename, char output_filename[IDENTIFIER_MAX]) {
-  if (strnlen(input_filename, IDENTIFIER_MAX) == IDENTIFIER_MAX) panic("Input filename exceeds max length - aborting.");
+static void generate_output_filename(
+  char* input_filename, 
+  char* output_filename,
+  size_t len
+) {
+  const size_t input_len = strnlen(input_filename, len);
+  if (input_len >= len)
+    panic("Input filename exceeds max length - aborting.");
 
   const char* match_ptr = strstr(input_filename, ".dasm");
-  if (!match_ptr) panic("Invalid input filename. Must end with '.dasm' - aborting.");
+  if (!match_ptr)
+    panic("Invalid input filename. Must end with '.dasm' - aborting.");
 
   const int index = match_ptr - input_filename;
-  printf("Index: %i", index);
-  memcpy(input_filename, output_filename, index - 1);
-  memcpy(".dbc", output_filename, sizeof(".dbc"));
-  // TODO: Fix
+  memcpy(output_filename, input_filename, sizeof(char) * input_len);
+
+  char extension[5] = ".dbc";
+  memcpy(output_filename+index, extension, sizeof(extension));
 }
 
 static void usage() {
@@ -88,12 +95,7 @@ int main(int argc, char* argv[]) {
 
   char* input_filename = argv[1];
   char output_filename[IDENTIFIER_MAX] = "";
-  generate_output_filename(input_filename, output_filename);
-  // const char* output_filename = 
-
-  puts(output_filename);
-
-  return 0;
+  generate_output_filename(input_filename, output_filename, IDENTIFIER_MAX);
 
   const int input_file = open(input_filename, O_RDONLY);
   if (input_file < 0) panic("Failed to open input file - aborting.");
