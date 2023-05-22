@@ -1,7 +1,7 @@
 # Use GCC as compiler.
 CC := gcc
 # Set additional compiler flags.
-CFLAGS  := -Wall -Werror -Wextra -pedantic-errors -std=c99 -MMD -MP
+CFLAGS  := -Wall -Werror -Wextra -pedantic-errors -std=c17 -MMD -MP
 
 .PHONY: all
 all: bin bin/runtime bin/assembler
