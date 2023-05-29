@@ -2,4 +2,6 @@ cilia
 runtime
 *.o
 *.d
+*.dins
+*.dbin
 bin

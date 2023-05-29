@@ -30,14 +30,14 @@ inline static word stack_peek(struct stack* s) {
 
 /* Instructions */
 enum instructions {
+  EXIT,
+  CONST,
   FETCH,
   STORE,
-  EXIT,
   ADD,
   SUBTRACT,
   MULTIPLY,
   DIVIDE,
-  CONST,
 };
 
 /* VM State */
@@ -61,6 +61,7 @@ word memory[MEMORY_SIZE] = {
   ADD,
   EXIT,
   // NEXT: Increment instruction_pointer and set it to the current memory content
+  // DROP
 };
 
 int main(void) {

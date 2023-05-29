@@ -4,3 +4,6 @@
 :quadruple
 	!double
 	!double
+:minus-two
+	-2
+	add
