@@ -7,6 +7,8 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 
+#include "diatom.h"
+
 #define IDENTIFIER_MAX 100
 #define LABELS_MAX 100
 
@@ -110,11 +112,14 @@ static void usage() {
 
 int main(int argc, char* argv[]) {
   int ch = 0;
-  while ((ch = getopt(argc, argv, "hc:")) != -1) { // TODO: Is this correct?
+  while ((ch = getopt(argc, argv, "h")) != -1) {
     switch (ch) {
     case 'h':
       usage();
-      exit(EXIT_SUCCESS);
+      return EXIT_SUCCESS;
+    default:
+      usage();
+      return EXIT_FAILURE;
     }
   }
 
@@ -156,12 +161,15 @@ int main(int argc, char* argv[]) {
   };
 
   unsigned int address = 0;
+  unsigned int line = 0;
 
   for (unsigned int i = 0; i < file_stats.st_size; ++i) {
     const char c = mapped[i];
 
     if (c == ' ' || c == '\t') continue;
     if (c == '\n' || c == '\r') {
+      ++line;
+
       switch (inst.name[0]) {
       // Comment
       case '#': break;
@@ -176,7 +184,7 @@ int main(int argc, char* argv[]) {
         const struct label* const l = find_label(inst.name + 1);
         if (l == NULL) {
           char err_msg[100] = "";
-          snprintf(err_msg, 100, "line %d: Label '%s' does not exist", i, inst.name);
+          snprintf(err_msg, 100, "line %d: Label '%s' does not exist", line, inst.name);
           error(err_msg);
           goto close_files;
         }
@@ -196,8 +204,15 @@ int main(int argc, char* argv[]) {
           address += 2;
         } else {
           // TODO: Validate instruction name against enum
+          if (name_to_opcode(inst.name) < 0) {
+            char err_msg[100] = "";
+            snprintf(err_msg, 100, "line %d: '%s' is not a valid instruction", line, inst.name);
+            error(err_msg);
+            goto close_files;
+          }
+
           fprintf(output_file, "inst: %s\n", inst.name);
-        ++address;
+          ++address;
         }
         break;
       }
@@ -222,3 +237,6 @@ close_input:
 
   return EXIT_SUCCESS;
 }
+
+// TODO: Implement the second pass to generate the actual binary file
+//       or just emit it directly
