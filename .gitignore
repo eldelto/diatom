@@ -3,5 +3,5 @@ runtime
 *.o
 *.d
 *.dins
-*.dbin
+*.dopc
 bin

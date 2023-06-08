@@ -1,7 +1,7 @@
 #ifndef DIATOM
 #define DIATOM
 
-#define INSTRUCTION_COUNT 10
+#define INSTRUCTION_COUNT 11
 #define INSTRUCTION_NAME_MAX 10
 enum instructions {
   EXIT,
@@ -13,7 +13,8 @@ enum instructions {
   MULTIPLY,
   DIVIDE,
   DUP,
-  DROP
+  DROP,
+  JUMP
 };
 
 char instruction_names[INSTRUCTION_COUNT][INSTRUCTION_NAME_MAX] = {
@@ -26,7 +27,8 @@ char instruction_names[INSTRUCTION_COUNT][INSTRUCTION_NAME_MAX] = {
   "multiply",
   "divide",
   "dup",
-  "drop"
+  "drop",
+  "jump"
 };
 
 int name_to_opcode(char* name) {

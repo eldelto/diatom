@@ -10,6 +10,7 @@
 #include "diatom.h"
 
 #define IDENTIFIER_MAX 100
+#define EXTENSION_MAX 6
 #define LABELS_MAX 100
 
 char error_msg[100] = "";
@@ -26,24 +27,6 @@ static void panic() {
 static void fatal_error(char msg[100]) {
   error(msg);
   panic();
-}
-
-struct instruction {
-  char name[IDENTIFIER_MAX];
-  unsigned int size;
-};
-
-static void inst_append(struct instruction* inst, char c) {
-  if (inst->size >= (IDENTIFIER_MAX - 1)) return;
-
-  inst->name[inst->size] = c;
-  inst->size++;
-  inst->name[inst->size] = '\0';
-}
-
-static void inst_reset(struct instruction* inst) {
-  inst->name[0] = '\0';
-  inst->size = 0;
 }
 
 struct label {
@@ -71,9 +54,9 @@ static void append_label(char name[IDENTIFIER_MAX], unsigned int address) {
   ++label_offset;
 }
 
-static const struct label* find_label(const char* const name) {
+static const struct label * find_label(const char *const name) {
   for (size_t i = 0; i < label_offset; ++i) {
-    const struct label* const label = &labels[i];
+    const struct label *const label = &labels[i];
     if (strcmp(name, label->name) == 0) {
       return label;
     }
@@ -82,13 +65,13 @@ static const struct label* find_label(const char* const name) {
   return NULL;
 }
 
-static int generate_output_filename(
-  char* input_filename, 
-  char* output_filename,
-  size_t len
+static int replace_extension(
+  char *input_filename, 
+  char output_filename[IDENTIFIER_MAX],
+  char output_extension[EXTENSION_MAX]
 ) {
-  const size_t input_len = strnlen(input_filename, len);
-  if (input_len >= len)
+  const size_t input_len = strnlen(input_filename, IDENTIFIER_MAX);
+  if (input_len >= IDENTIFIER_MAX)
     return error("input filename exceeds max length");
 
   const char* match_ptr = strstr(input_filename, ".dasm");
@@ -98,10 +81,165 @@ static int generate_output_filename(
   const int index = match_ptr - input_filename;
   memcpy(output_filename, input_filename, sizeof(char) * input_len);
 
-  char extension[6] = ".dins";
-  memcpy(output_filename+index, extension, sizeof(extension));
+  memcpy(output_filename+index, output_extension, sizeof(char) * EXTENSION_MAX);
 
   return 0;
+}
+
+static void trim_string(char* string){
+  if (string == NULL || strnlen(string, IDENTIFIER_MAX) == 0) return;
+
+  const char* start = string;
+  while(isspace(*start) || *start == '\n' || *start == '\r') ++start;
+
+  size_t len = strnlen(start, IDENTIFIER_MAX);
+  memmove(string, start, len + 1);
+
+  char* end = string + len - 1;
+  while(end >= string  && (isspace(*end) || *end == '\n' || *end == '\r')) --end ;
+
+  *++end = '\0';
+}
+
+typedef int (*line_handler)(
+  FILE *output_file, 
+  char instruction[IDENTIFIER_MAX], 
+  const unsigned int line_number);
+
+static int translate_file(FILE *input_file, FILE *output_file, line_handler handler) {
+  int err = 0;
+
+  char *line = NULL;
+  size_t line_len = 0;
+  char instruction[IDENTIFIER_MAX];
+
+  unsigned int line_number = 0;
+  while(getline(&line, &line_len, input_file) != -1) {
+    ++line_number;
+
+    trim_string(line);
+    if (line_len > IDENTIFIER_MAX) {
+      char err_msg[100] = "";
+      snprintf(err_msg, 100, "line %d: Identifier exceeds max length", line_number);
+      error(err_msg);
+      break;
+    }
+    memcpy(instruction, line, sizeof(instruction));
+
+    if((err = handler(output_file, instruction, line_number))) break;
+  }
+
+  free(line);
+
+  return err;
+}
+
+static int label_handler(
+  FILE *output_file, 
+  char instruction[IDENTIFIER_MAX], 
+  const unsigned int line_number) {
+
+  static unsigned int address = 0;
+
+  switch (instruction[0]) {
+    // Comment
+    case '#': break;
+    // Label creation
+    case ':': {
+      append_label(instruction, address);
+      fprintf(output_file, "# %s @ %d\n", instruction, address);
+      break;
+    }
+    // Jump to label
+    case '!': {
+      const struct label* const l = find_label(instruction + 1);
+      if (l == NULL) {
+        char err_msg[100] = "";
+        snprintf(err_msg, 100, "line %d: Label '%s' does not exist", line_number, instruction);
+        error(err_msg);
+        return -1;
+      }
+
+      fputs("const\n", output_file);
+      fprintf(output_file, "%d\n", l->address);
+      fputs("jump\n", output_file);
+      address += 3;
+      break;
+    }
+    // Constant or VM instruction
+    default: {
+      if (isdigit(instruction[0]) || instruction[0] == '-') {
+        int number = atoi(instruction);
+        fputs("const\n", output_file);
+        fprintf(output_file, "%d\n", number);
+        address += 2;
+      } else {
+        if (name_to_opcode(instruction) < 0) {
+          char err_msg[100] = "";
+          snprintf(err_msg, 100, "line %d: '%s' is not a valid instruction", line_number, instruction);
+          error(err_msg);
+          return -1;
+        }
+
+        fprintf(output_file, "%s\n", instruction);
+        ++address;
+      }
+    }
+  }
+
+  return 0;
+}
+
+static int opcode_handler(
+  FILE *output_file, 
+  char instruction[IDENTIFIER_MAX], 
+  const unsigned int line_number) {
+
+  if (instruction[0] == '#') return 0;
+
+  // Constant or VM instruction
+  int opcode = EXIT;
+  if (isdigit(instruction[0]) || instruction[0] == '-') {
+    opcode = atoi(instruction);
+  } else {
+    opcode = name_to_opcode(instruction);
+    if (opcode < 0) {
+      char err_msg[100] = "";
+      snprintf(err_msg, 100, "line %d: '%s' is not a valid instruction", line_number, instruction);
+      return error(err_msg);
+    }
+  }
+
+  if (fwrite(&opcode, sizeof(opcode), 1, output_file) == 0) return error("Failed to write binary data to .dopc file");
+
+  return 0;
+}
+
+static int create_output_file(char *input_filename, char output_filename[IDENTIFIER_MAX], line_handler handler, char *write_mode) {
+  int err = 0;
+
+  FILE* input_file = fopen(input_filename, "r");
+  if (input_file == NULL) {
+    return error("failed to open input file");
+  }
+
+  FILE* output_file = fopen(output_filename, write_mode);
+  if (output_file == NULL) {
+    err = error("failed to open input file");
+    goto close_input_file;
+  }
+
+  err = translate_file(input_file, output_file, handler);
+  if (err) {
+    goto close_files;
+  }
+
+close_files:
+  fclose(output_file);
+close_input_file:
+  fclose(input_file);
+
+  return err;
 }
 
 static void usage() {
@@ -128,115 +266,14 @@ int main(int argc, char* argv[]) {
     fatal_error("invalid arguments");
   }
 
-  char* input_filename = argv[1];
-  char output_filename[IDENTIFIER_MAX] = "";
-  int err = generate_output_filename(input_filename, output_filename, IDENTIFIER_MAX);
-  if (err) panic();
+  char *dasm_filename = argv[1];
+  char dins_filename[IDENTIFIER_MAX] = "";
+  char dopc_filename[IDENTIFIER_MAX] = "";
+  if (replace_extension(dasm_filename, dins_filename, ".dins")) panic();
+  if (replace_extension(dasm_filename, dopc_filename, ".dopc")) panic();
 
-  const int input_file = open(input_filename, O_RDONLY);
-  if (input_file < 0) fatal_error("failed to open input file");
-
-  struct stat file_stats;
-  err = fstat(input_file, &file_stats);
-  if (err) {
-    error("failed to read file stats from input file");
-    goto close_input;
-  }
-
-  const char* mapped = mmap(NULL, file_stats.st_size, PROT_READ, MAP_PRIVATE, input_file, 0);
-  if (mapped == MAP_FAILED) {
-    error("failed to mmap input file");
-    goto close_input;
-  }
-
-  FILE* output_file = fopen(output_filename, "w");
-  if (input_file < 0) {
-    error("failed to open output file");
-    goto unmap_input;
-  }
-
-  struct instruction inst = {
-    .name = "",
-    .size = 0,
-  };
-
-  unsigned int address = 0;
-  unsigned int line = 0;
-
-  for (unsigned int i = 0; i < file_stats.st_size; ++i) {
-    const char c = mapped[i];
-
-    if (c == ' ' || c == '\t') continue;
-    if (c == '\n' || c == '\r') {
-      ++line;
-
-      switch (inst.name[0]) {
-      // Comment
-      case '#': break;
-      // Label creation
-      case ':': {
-        append_label(inst.name, address);
-        fprintf(output_file, "# %s @ %d\n", inst.name, address);
-        break;
-      }
-      // Jump to label
-      case '!': {
-        const struct label* const l = find_label(inst.name + 1);
-        if (l == NULL) {
-          char err_msg[100] = "";
-          snprintf(err_msg, 100, "line %d: Label '%s' does not exist", line, inst.name);
-          error(err_msg);
-          goto close_files;
-        }
-
-        fputs("const\n", output_file);
-        fprintf(output_file, "%d\n", l->address);
-        fputs("jump\n", output_file);
-        address += 3;
-        break;
-      }
-      // Constant or VM instruction
-      default: {
-        if (isdigit(inst.name[0]) || inst.name[0] == '-') {
-          int number = atoi(inst.name);
-          fputs("const\n", output_file);
-          fprintf(output_file, "%d\n", number);
-          address += 2;
-        } else {
-          // TODO: Validate instruction name against enum
-          if (name_to_opcode(inst.name) < 0) {
-            char err_msg[100] = "";
-            snprintf(err_msg, 100, "line %d: '%s' is not a valid instruction", line, inst.name);
-            error(err_msg);
-            goto close_files;
-          }
-
-          fprintf(output_file, "inst: %s\n", inst.name);
-          ++address;
-        }
-        break;
-      }
-      }
-
-      inst_reset(&inst);
-    }
-    else {
-      inst_append(&inst, c);
-    }
-  }
-
-
-close_files:
-  fclose(output_file);
-unmap_input:
-  munmap((void*)mapped, file_stats.st_size);
-close_input:
-  close(input_file);
-
-  if (error_msg[0]) panic();
+  if (create_output_file(dasm_filename, dins_filename, label_handler, "w")) panic();
+  if (create_output_file(dins_filename, dopc_filename, opcode_handler, "wb")) panic();
 
   return EXIT_SUCCESS;
 }
-
-// TODO: Implement the second pass to generate the actual binary file
-//       or just emit it directly
