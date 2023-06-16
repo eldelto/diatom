@@ -8,26 +8,11 @@
 #include <sys/stat.h>
 
 #include "diatom.h"
+#include "util.h"
 
 #define IDENTIFIER_MAX 100
 #define EXTENSION_MAX 6
 #define LABELS_MAX 100
-
-char error_msg[100] = "";
-static int error(char msg[100]) {
-  memcpy(error_msg, msg, sizeof(error_msg));
-  return -1;
-}
-
-static void panic() {
-  printf("\033[31mError: %s\033[0m\n", error_msg);
-  exit(EXIT_FAILURE);
-}
-
-static void fatal_error(char msg[100]) {
-  error(msg);
-  panic();
-}
 
 struct label {
   char name[IDENTIFIER_MAX];
@@ -242,8 +227,8 @@ close_input_file:
   return err;
 }
 
-static void usage() {
-  puts("Usage: dasm [input-file]\n");
+static void usage(void) {
+  puts("Usage: dasm [dasm-file]\n");
   puts("Flags:");
   puts("  -h - Displays this usage message.");
 }

@@ -1,9 +1,5 @@
-:double
-	dup
-	add
-:quadruple
-	!double
-	!double
-:minus-two
-	-2
-	add
+5
+8
+add
+1
+subtract

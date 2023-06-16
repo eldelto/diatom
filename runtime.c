@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#include "util.h"
+
 #define STACK_SIZE  10
 #define MEMORY_SIZE 100
 typedef int word;
@@ -64,7 +66,36 @@ word memory[MEMORY_SIZE] = {
   // DROP
 };
 
-int main(void) {
+static int init_memory(char *filename) {
+  FILE* input_file = fopen(filename, "r");
+  if (input_file == NULL) {
+    return error("failed to open input file");
+  }
+
+  unsigned int memory_offset = 0;
+  while (fread(&memory[memory_offset], 1, sizeof(word), input_file)) {
+    // TODO: Properly close file
+    if (++memory_offset >= MEMORY_SIZE) fatal_error("exceeded available memory");
+  }
+
+  fclose(input_file);
+  return 0;
+}
+
+static void usage(void) {
+  puts("Usage: dvm [dopc-file]\n");
+  puts("Flags:");
+  puts("  -h - Displays this usage message.");
+}
+
+int main(int argc, char* argv[]) {
+  if (argc != 2) {
+    usage();
+    fatal_error("invalid arguments");
+  }
+
+  char *dopc_filename = argv[1];
+  init_memory(dopc_filename);
 
   while (instruction_pointer < MEMORY_SIZE) {
     const word instruction = memory[instruction_pointer];
@@ -90,7 +121,7 @@ int main(void) {
     }
     case SUBTRACT: {
       const word value = stack_pop(data_stack);
-      stack_push(data_stack, value - stack_pop(data_stack));
+      stack_push(data_stack, stack_pop(data_stack) - value);
       break;
     }
     case MULTIPLY: {
