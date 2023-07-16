@@ -35,7 +35,7 @@ static void append_label(char name[IDENTIFIER_MAX], unsigned int address) {
   memcpy(l.name, name + 1, IDENTIFIER_MAX);
   labels[label_offset] = l;
 
-  if (label_offset == (LABELS_MAX - 1)) fatal_error("maximum number of labels");
+  if (label_offset == (LABELS_MAX - 1)) dlt_fatal_error("maximum number of labels");
   ++label_offset;
 }
 
@@ -57,11 +57,11 @@ static int replace_extension(
 ) {
   const size_t input_len = strnlen(input_filename, IDENTIFIER_MAX);
   if (input_len >= IDENTIFIER_MAX)
-    return error("input filename exceeds max length");
+    return dlt_error("input filename exceeds max length");
 
   const char* match_ptr = strstr(input_filename, ".dasm");
   if (!match_ptr)
-    return error("invalid input filename. Must end with '.dasm'");
+    return dlt_error("invalid input filename. Must end with '.dasm'");
 
   const int index = match_ptr - input_filename;
   memcpy(output_filename, input_filename, sizeof(char) * input_len);
@@ -106,10 +106,10 @@ static int translate_file(FILE *input_file, FILE *output_file, line_handler hand
     if (line_len > IDENTIFIER_MAX) {
       char err_msg[100] = "";
       snprintf(err_msg, 100, "line %d: Identifier exceeds max length", line_number);
-      error(err_msg);
+      dlt_error(err_msg);
       break;
     }
-    memcpy(instruction, line, sizeof(instruction));
+    strlcpy(instruction, line, sizeof(instruction));
 
     if((err = handler(output_file, instruction, line_number))) break;
   }
@@ -141,7 +141,7 @@ static int label_handler(
       if (l == NULL) {
         char err_msg[100] = "";
         snprintf(err_msg, 100, "line %d: Label '%s' does not exist", line_number, instruction);
-        error(err_msg);
+        dlt_error(err_msg);
         return -1;
       }
 
@@ -162,7 +162,7 @@ static int label_handler(
         if (name_to_opcode(instruction) < 0) {
           char err_msg[100] = "";
           snprintf(err_msg, 100, "line %d: '%s' is not a valid instruction", line_number, instruction);
-          error(err_msg);
+          dlt_error(err_msg);
           return -1;
         }
 
@@ -191,11 +191,11 @@ static int opcode_handler(
     if (opcode < 0) {
       char err_msg[100] = "";
       snprintf(err_msg, 100, "line %d: '%s' is not a valid instruction", line_number, instruction);
-      return error(err_msg);
+      return dlt_error(err_msg);
     }
   }
 
-  if (fwrite(&opcode, sizeof(opcode), 1, output_file) == 0) return error("Failed to write binary data to .dopc file");
+  if (fwrite(&opcode, sizeof(opcode), 1, output_file) == 0) return dlt_error("Failed to write binary data to .dopc file");
 
   return 0;
 }
@@ -205,12 +205,12 @@ static int create_output_file(char *input_filename, char output_filename[IDENTIF
 
   FILE* input_file = fopen(input_filename, "r");
   if (input_file == NULL) {
-    return error("failed to open input file");
+    return dlt_error("failed to open input file");
   }
 
   FILE* output_file = fopen(output_filename, write_mode);
   if (output_file == NULL) {
-    err = error("failed to open input file");
+    err = dlt_error("failed to open input file");
     goto close_input_file;
   }
 
@@ -248,17 +248,17 @@ int main(int argc, char* argv[]) {
 
   if (argc != 2) {
     usage();
-    fatal_error("invalid arguments");
+    dlt_fatal_error("invalid arguments");
   }
 
   char *dasm_filename = argv[1];
   char dins_filename[IDENTIFIER_MAX] = "";
   char dopc_filename[IDENTIFIER_MAX] = "";
-  if (replace_extension(dasm_filename, dins_filename, ".dins")) panic();
-  if (replace_extension(dasm_filename, dopc_filename, ".dopc")) panic();
+  if (replace_extension(dasm_filename, dins_filename, ".dins")) dlt_panic();
+  if (replace_extension(dasm_filename, dopc_filename, ".dopc")) dlt_panic();
 
-  if (create_output_file(dasm_filename, dins_filename, label_handler, "w")) panic();
-  if (create_output_file(dins_filename, dopc_filename, opcode_handler, "wb")) panic();
+  if (create_output_file(dasm_filename, dins_filename, label_handler, "w")) dlt_panic();
+  if (create_output_file(dins_filename, dopc_filename, opcode_handler, "wb")) dlt_panic();
 
   return EXIT_SUCCESS;
 }

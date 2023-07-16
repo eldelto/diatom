@@ -1,10 +1,15 @@
-# Use GCC as compiler.
-CC := gcc
+.DELETE_ON_ERROR:
+
+# Set default compiler
+CC := clang
+
 # Set additional compiler flags.
 CFLAGS  := -Wall -Werror -Wextra -pedantic-errors \
-	-Wno-unused-parameter \
-	-Wno-unused-function \
-	-std=c17 -MMD -MP
+	-Wno-macro-redefined \
+        -D_FORTIFY_SOURCE=2 \
+        -fsanitize=address \
+        -O2 \
+        -std=c17 -MMD -MP
 
 .PHONY: all
 all: bin bin/runtime bin/assembler
@@ -13,10 +18,10 @@ bin:
 	mkdir bin
 
 bin/runtime: runtime.o
-	$(CC) $^ -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 bin/assembler: assembler.o
-	$(CC) $^ -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 .PHONY: clean
 clean:
@@ -24,4 +29,5 @@ clean:
 	rm -f *.o
 	rm -f *.d
 
--include *.d
+HEADER_DEPS := $(shell find . -name '*.d')
+-include $(HEADER_DEPS)

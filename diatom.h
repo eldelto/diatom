@@ -1,6 +1,8 @@
 #ifndef DIATOM
 #define DIATOM
 
+#include "util.h"
+
 #define INSTRUCTION_COUNT 11
 #define INSTRUCTION_NAME_MAX 10
 enum instructions {
@@ -33,7 +35,7 @@ char instruction_names[INSTRUCTION_COUNT][INSTRUCTION_NAME_MAX] = {
 
 int name_to_opcode(char* name) {
     for (unsigned int i = 0; i < INSTRUCTION_COUNT; ++i)
-        if (strncmp(instruction_names[i], name, INSTRUCTION_NAME_MAX) == 0) return i;
+      if (dlt_string_equals(instruction_names[i], name)) return i;
 
     return -1;
 }
