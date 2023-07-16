@@ -23,6 +23,7 @@ inline static void stack_push(struct stack* s, word value) {
 
 inline static word stack_pop(struct stack* s) {
   const word index = --s->pointer % STACK_SIZE;
+  if (index < 0) dlt_fatal_error("data stack underflow");
   return s->data[index];
 }
 
@@ -44,16 +45,7 @@ struct stack* call_stack = &(struct stack) {
     .data = { 0 },
 };
 
-word memory[MEMORY_SIZE] = {
-  CONST,
-  10,
-  CONST,
-  5,
-  ADD,
-  EXIT,
-  // NEXT: Increment instruction_pointer and set it to the current memory content
-  // DROP
-};
+word memory[MEMORY_SIZE] = { EXIT };
 
 static int init_memory(char *filename) {
   FILE* input_file = fopen(filename, "r");
@@ -131,6 +123,16 @@ int main(int argc, char* argv[]) {
       stack_push(data_stack, value);
       break;
     }
+    case JUMP: {
+      instruction_pointer = stack_pop(data_stack);
+      continue;
+    }
+    case JUMPN: {
+      const word value = memory[instruction_pointer + 1];
+      instruction_pointer = value;
+      continue;
+    }
+    case NOP: break;
     default: {
       printf("Unknown instruction at memory location %d - aborting.", instruction_pointer);
       return -1;

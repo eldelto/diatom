@@ -32,7 +32,7 @@ static void append_label(char name[IDENTIFIER_MAX], unsigned int address) {
     .name = "",
     .address = address,
   };
-  memcpy(l.name, name + 1, IDENTIFIER_MAX);
+  strlcpy(l.name, name + 1, IDENTIFIER_MAX);
   labels[label_offset] = l;
 
   if (label_offset == (LABELS_MAX - 1)) dlt_fatal_error("maximum number of labels");
@@ -51,10 +51,10 @@ static const struct label * find_label(const char *const name) {
 }
 
 static int replace_extension(
-  char *input_filename, 
-  char output_filename[IDENTIFIER_MAX],
-  char output_extension[EXTENSION_MAX]
-) {
+			     char *input_filename, 
+			     char output_filename[IDENTIFIER_MAX],
+			     char output_extension[EXTENSION_MAX]
+			     ) {
   const size_t input_len = strnlen(input_filename, IDENTIFIER_MAX);
   if (input_len >= IDENTIFIER_MAX)
     return dlt_error("input filename exceeds max length");
@@ -73,23 +73,23 @@ static int replace_extension(
 
 static void trim_string(char* string){
   if (string == NULL || strnlen(string, IDENTIFIER_MAX) == 0) return;
-
+  
   const char* start = string;
   while(isspace(*start) || *start == '\n' || *start == '\r') ++start;
-
+  
   size_t len = strnlen(start, IDENTIFIER_MAX);
   memmove(string, start, len + 1);
-
+  
   char* end = string + len - 1;
   while(end >= string  && (isspace(*end) || *end == '\n' || *end == '\r')) --end ;
-
+  
   *++end = '\0';
 }
 
 typedef int (*line_handler)(
-  FILE *output_file, 
-  char instruction[IDENTIFIER_MAX], 
-  const unsigned int line_number);
+			    FILE *output_file, 
+			    char instruction[IDENTIFIER_MAX], 
+			    const unsigned int line_number);
 
 static int translate_file(FILE *input_file, FILE *output_file, line_handler handler) {
   int err = 0;
@@ -106,10 +106,11 @@ static int translate_file(FILE *input_file, FILE *output_file, line_handler hand
     if (line_len > IDENTIFIER_MAX) {
       char err_msg[100] = "";
       snprintf(err_msg, 100, "line %d: Identifier exceeds max length", line_number);
-      dlt_error(err_msg);
+      err = dlt_error(err_msg);
+      
       break;
     }
-    strlcpy(instruction, line, sizeof(instruction));
+    strlcpy(instruction, line, sizeof(instruction) - 1);
 
     if((err = handler(output_file, instruction, line_number))) break;
   }
@@ -119,66 +120,89 @@ static int translate_file(FILE *input_file, FILE *output_file, line_handler hand
   return err;
 }
 
-static int label_handler(
-  FILE *output_file, 
-  char instruction[IDENTIFIER_MAX], 
-  const unsigned int line_number) {
+static int label_handler(FILE *output_file, 
+			 char instruction[IDENTIFIER_MAX], 
+			 const unsigned int line_number) {
 
-  static unsigned int address = 0;
+  // Start at 2 because we have to jump to the _start label.
+  static unsigned int address = 2;
 
   switch (instruction[0]) {
+    // Empty line
+  case '\0': break;
     // Comment
-    case '#': break;
+  case '#': break;
     // Label creation
-    case ':': {
-      append_label(instruction, address);
-      fprintf(output_file, "# %s @ %d\n", instruction, address);
-      break;
-    }
+  case ':': {
+    append_label(instruction, address);
+    fprintf(output_file, "# %s @ %d\n", instruction, address);
+    break;
+  }
     // Jump to label
-    case '!': {
-      const struct label* const l = find_label(instruction + 1);
-      if (l == NULL) {
-        char err_msg[100] = "";
-        snprintf(err_msg, 100, "line %d: Label '%s' does not exist", line_number, instruction);
-        dlt_error(err_msg);
-        return -1;
-      }
+  case '!': {
+    const struct label* const l = find_label(instruction + 1);
+    if (l == NULL) {
+      char err_msg[100] = "";
+      snprintf(err_msg, 100, "line %d: Label '%s' does not exist", line_number, instruction);
+      dlt_error(err_msg);
+      return -1;
+    }
 
+    fputs("const\n", output_file);
+    fprintf(output_file, "%d\n", l->address);
+    fputs("jump\n", output_file);
+    address += 3;
+    break;
+  }
+  case '@': {
+    const struct label* const l = find_label(instruction + 1);
+    if (l == NULL) {
+      char err_msg[100] = "";
+      snprintf(err_msg, 100, "line %d: Label '%s' does not exist", line_number, instruction);
+      dlt_error(err_msg);
+      return -1;
+    }
+
+    fputs("const\n", output_file);
+    fprintf(output_file, "%d\n", l->address);
+    address += 2;
+    break;
+  }
+  default: {
+    if (isdigit(instruction[0]) || instruction[0] == '-') {
+      int number = atoi(instruction);
       fputs("const\n", output_file);
-      fprintf(output_file, "%d\n", l->address);
-      fputs("jump\n", output_file);
-      address += 3;
-      break;
-    }
-    // Constant or VM instruction
-    default: {
-      if (isdigit(instruction[0]) || instruction[0] == '-') {
-        int number = atoi(instruction);
-        fputs("const\n", output_file);
-        fprintf(output_file, "%d\n", number);
-        address += 2;
-      } else {
-        if (name_to_opcode(instruction) < 0) {
-          char err_msg[100] = "";
-          snprintf(err_msg, 100, "line %d: '%s' is not a valid instruction", line_number, instruction);
-          dlt_error(err_msg);
-          return -1;
-        }
-
-        fprintf(output_file, "%s\n", instruction);
-        ++address;
+      fprintf(output_file, "%d\n", number);
+      address += 2;
+    } else {
+      if (name_to_opcode(instruction) < 0) {
+	char err_msg[100] = "";
+	snprintf(err_msg, 100, "line %d: '%s' is not a valid instruction", line_number, instruction);
+	dlt_error(err_msg);
+	return -1;
       }
+
+      fprintf(output_file, "%s\n", instruction);
+      ++address;
     }
+  }
   }
 
   return 0;
 }
 
-static int opcode_handler(
-  FILE *output_file, 
-  char instruction[IDENTIFIER_MAX], 
-  const unsigned int line_number) {
+static int opcode_handler(FILE *output_file, 
+			  char instruction[IDENTIFIER_MAX], 
+			  const unsigned int line_number) {
+
+  if (line_number == 1) {
+    const struct label* const l = find_label("_start");
+    if (l == NULL) return dlt_error("no '_start' label found");
+
+    const int opcode = JUMPN;
+    if (fwrite(&opcode, sizeof(opcode), 1, output_file) == 0) return dlt_error("failed to write initial jumpn to .dopc file");
+    if (fwrite(&l->address, sizeof(l->address), 1, output_file) == 0) return dlt_error("failed to write '_start' address to .dopc file");
+  }
 
   if (instruction[0] == '#') return 0;
 
@@ -195,7 +219,7 @@ static int opcode_handler(
     }
   }
 
-  if (fwrite(&opcode, sizeof(opcode), 1, output_file) == 0) return dlt_error("Failed to write binary data to .dopc file");
+  if (fwrite(&opcode, sizeof(opcode), 1, output_file) == 0) return dlt_error("failed to write binary data to .dopc file");
 
   return 0;
 }
@@ -219,9 +243,9 @@ static int create_output_file(char *input_filename, char output_filename[IDENTIF
     goto close_files;
   }
 
-close_files:
+ close_files:
   fclose(output_file);
-close_input_file:
+ close_input_file:
   fclose(input_file);
 
   return err;

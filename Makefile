@@ -8,6 +8,7 @@ CFLAGS  := -Wall -Werror -Wextra -pedantic-errors \
 	-Wno-macro-redefined \
         -D_FORTIFY_SOURCE=2 \
         -fsanitize=address \
+	-g3 \
         -O2 \
         -std=c17 -MMD -MP
 
