@@ -6,7 +6,7 @@
 
 #define STACK_SIZE  10
 #define MEMORY_SIZE 100
-typedef int word;
+typedef unsigned int word;
 
 /* Stacks */
 struct stack {

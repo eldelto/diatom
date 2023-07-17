@@ -32,7 +32,7 @@ static void append_label(char name[IDENTIFIER_MAX], unsigned int address) {
     .name = "",
     .address = address,
   };
-  strlcpy(l.name, name + 1, IDENTIFIER_MAX);
+  strlcpy(l.name, name, IDENTIFIER_MAX);
   labels[label_offset] = l;
 
   if (label_offset == (LABELS_MAX - 1)) dlt_fatal_error("maximum number of labels");
@@ -86,8 +86,7 @@ static void trim_string(char* string){
   *++end = '\0';
 }
 
-typedef int (*line_handler)(
-			    FILE *output_file, 
+typedef int (*line_handler)(FILE *output_file, 
 			    char instruction[IDENTIFIER_MAX], 
 			    const unsigned int line_number);
 
@@ -134,7 +133,7 @@ static int label_handler(FILE *output_file,
   case '#': break;
     // Label creation
   case ':': {
-    append_label(instruction, address);
+    append_label(instruction + 1, address);
     fprintf(output_file, "# %s @ %d\n", instruction, address);
     break;
   }
@@ -144,8 +143,7 @@ static int label_handler(FILE *output_file,
     if (l == NULL) {
       char err_msg[100] = "";
       snprintf(err_msg, 100, "line %d: Label '%s' does not exist", line_number, instruction);
-      dlt_error(err_msg);
-      return -1;
+      return dlt_error(err_msg);
     }
 
     fputs("const\n", output_file);
@@ -159,12 +157,57 @@ static int label_handler(FILE *output_file,
     if (l == NULL) {
       char err_msg[100] = "";
       snprintf(err_msg, 100, "line %d: Label '%s' does not exist", line_number, instruction);
-      dlt_error(err_msg);
-      return -1;
+      return dlt_error(err_msg);
     }
 
     fprintf(output_file, "%d\n", l->address);
     ++address;
+    break;
+  }
+  case '.': {
+    if (dlt_string_starts_with(instruction, ".colonword")) {
+      const char separator[] = " ";
+      char *token = "";
+      
+      strsep(&instruction, separator);
+      for (unsigned int i = 0; (token = strsep(&instruction, separator)) != NULL; ++i) {
+	if (i == 0) {
+	  // TODO: Call :label function
+	  puts(token);
+	  append_label(token, address);
+	  fprintf(output_file, "# %s @ %d\n", token, address);
+	  fputs("docol\n", output_file);
+	} else {
+	  // TODO: Call @label function
+	 const struct label* const l = find_label(token);
+	 if (l == NULL) {
+	   char err_msg[100] = "";
+	   snprintf(err_msg, 100, "line %d: Label '%s' does not exist", line_number, token);
+	   return dlt_error(err_msg);
+	 }
+
+	 fprintf(output_file, "%d\n", l->address);
+	}
+
+	++address;
+       }
+
+      // TODO: Call @label function
+      const struct label* const l = find_label("return");
+      if (l == NULL) {
+	char err_msg[100] = "";
+	snprintf(err_msg, 100, "line %d: Label '%s' does not exist", line_number, token);
+	return dlt_error(err_msg);
+      }
+
+      fprintf(output_file, "%d\n", l->address);
+      ++address;
+    } else {
+      char err_msg[100] = "";
+      snprintf(err_msg, 100, "line %d: Macro '%s' does not exist", line_number, instruction);
+      return dlt_error(err_msg);
+    }
+
     break;
   }
   default: {
@@ -177,8 +220,7 @@ static int label_handler(FILE *output_file,
       if (name_to_opcode(instruction) < 0) {
 	char err_msg[100] = "";
 	snprintf(err_msg, 100, "line %d: '%s' is not a valid instruction", line_number, instruction);
-	dlt_error(err_msg);
-	return -1;
+	return dlt_error(err_msg);
       }
 
       fprintf(output_file, "%s\n", instruction);

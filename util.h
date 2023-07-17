@@ -34,6 +34,10 @@ bool dlt_string_equals(char *a, char *b) {
   return strncmp(a, b, 20) == 0;
 }
 
+bool dlt_string_starts_with(char *s, char *prefix) {
+  return strncmp(s, prefix, strlen(prefix)) == 0;
+}
+
 /* Random utility functions */
 double dlt_clamp_value(double value, double min, double max) {
     if (value < min) return min;
