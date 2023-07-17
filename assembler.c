@@ -13,6 +13,7 @@
 #define IDENTIFIER_MAX 100
 #define EXTENSION_MAX 6
 #define LABELS_MAX 100
+#define MACRO_SEPARATOR " "
 
 struct label {
   char name[IDENTIFIER_MAX];
@@ -50,11 +51,9 @@ static const struct label * find_label(const char *const name) {
   return NULL;
 }
 
-static int replace_extension(
-			     char *input_filename, 
+static int replace_extension(char *input_filename,
 			     char output_filename[IDENTIFIER_MAX],
-			     char output_extension[EXTENSION_MAX]
-			     ) {
+			     char output_extension[EXTENSION_MAX]) {
   const size_t input_len = strnlen(input_filename, IDENTIFIER_MAX);
   if (input_len >= IDENTIFIER_MAX)
     return dlt_error("input filename exceeds max length");
@@ -71,23 +70,37 @@ static int replace_extension(
   return 0;
 }
 
-static void trim_string(char* string){
+static void trim_string(char *string){
   if (string == NULL || strnlen(string, IDENTIFIER_MAX) == 0) return;
-  
+
   const char* start = string;
   while(isspace(*start) || *start == '\n' || *start == '\r') ++start;
-  
+
   size_t len = strnlen(start, IDENTIFIER_MAX);
   memmove(string, start, len + 1);
-  
+
   char* end = string + len - 1;
   while(end >= string  && (isspace(*end) || *end == '\n' || *end == '\r')) --end ;
-  
+
   *++end = '\0';
 }
 
-typedef int (*line_handler)(FILE *output_file, 
-			    char instruction[IDENTIFIER_MAX], 
+static int resolve_label(char name[IDENTIFIER_MAX],
+			 FILE *output_file,
+			 unsigned int line_number) {
+  const struct label* const l = find_label(name);
+  if (l == NULL) {
+    char err_msg[100] = "";
+    snprintf(err_msg, 100, "line %d: Label '%s' does not exist", line_number, name);
+    return dlt_error(err_msg);
+  }
+
+  fprintf(output_file, "%d\n", l->address);
+  return 0;
+}
+
+typedef int (*line_handler)(FILE *output_file,
+			    char instruction[IDENTIFIER_MAX],
 			    const unsigned int line_number);
 
 static int translate_file(FILE *input_file, FILE *output_file, line_handler handler) {
@@ -106,7 +119,7 @@ static int translate_file(FILE *input_file, FILE *output_file, line_handler hand
       char err_msg[100] = "";
       snprintf(err_msg, 100, "line %d: Identifier exceeds max length", line_number);
       err = dlt_error(err_msg);
-      
+
       break;
     }
     strlcpy(instruction, line, sizeof(instruction) - 1);
@@ -119,8 +132,8 @@ static int translate_file(FILE *input_file, FILE *output_file, line_handler hand
   return err;
 }
 
-static int label_handler(FILE *output_file, 
-			 char instruction[IDENTIFIER_MAX], 
+static int label_handler(FILE *output_file,
+			 char instruction[IDENTIFIER_MAX],
 			 const unsigned int line_number) {
 
   // Start at 2 because we have to jump to the _start label.
@@ -139,68 +152,44 @@ static int label_handler(FILE *output_file,
   }
     // Jump to label
   case '!': {
-    const struct label* const l = find_label(instruction + 1);
-    if (l == NULL) {
-      char err_msg[100] = "";
-      snprintf(err_msg, 100, "line %d: Label '%s' does not exist", line_number, instruction);
-      return dlt_error(err_msg);
-    }
-
     fputs("const\n", output_file);
-    fprintf(output_file, "%d\n", l->address);
+
+    int err = resolve_label(instruction + 1, output_file, line_number);
+    if (err) return err;
+
     fputs("jump\n", output_file);
     address += 3;
     break;
   }
   case '@': {
-    const struct label* const l = find_label(instruction + 1);
-    if (l == NULL) {
-      char err_msg[100] = "";
-      snprintf(err_msg, 100, "line %d: Label '%s' does not exist", line_number, instruction);
-      return dlt_error(err_msg);
-    }
-
-    fprintf(output_file, "%d\n", l->address);
+    int err = resolve_label(instruction + 1, output_file, line_number);
+    if (err) return err;
     ++address;
     break;
   }
   case '.': {
     if (dlt_string_starts_with(instruction, ".colonword")) {
-      const char separator[] = " ";
       char *token = "";
-      
-      strsep(&instruction, separator);
-      for (unsigned int i = 0; (token = strsep(&instruction, separator)) != NULL; ++i) {
+
+      strsep(&instruction, MACRO_SEPARATOR);
+      for (unsigned int i = 0;
+	   (token = strsep(&instruction, MACRO_SEPARATOR)) != NULL; ++i) {
 	if (i == 0) {
 	  // TODO: Call :label function
-	  puts(token);
 	  append_label(token, address);
 	  fprintf(output_file, "# %s @ %d\n", token, address);
 	  fputs("docol\n", output_file);
 	} else {
-	  // TODO: Call @label function
-	 const struct label* const l = find_label(token);
-	 if (l == NULL) {
-	   char err_msg[100] = "";
-	   snprintf(err_msg, 100, "line %d: Label '%s' does not exist", line_number, token);
-	   return dlt_error(err_msg);
-	 }
-
-	 fprintf(output_file, "%d\n", l->address);
+	  int err = resolve_label(token, output_file, line_number);
+	  if (err) return err;
 	}
 
 	++address;
-       }
-
-      // TODO: Call @label function
-      const struct label* const l = find_label("return");
-      if (l == NULL) {
-	char err_msg[100] = "";
-	snprintf(err_msg, 100, "line %d: Label '%s' does not exist", line_number, token);
-	return dlt_error(err_msg);
       }
 
-      fprintf(output_file, "%d\n", l->address);
+      int err = resolve_label("return", output_file, line_number);
+      if (err) return err;
+
       ++address;
     } else {
       char err_msg[100] = "";
@@ -232,8 +221,8 @@ static int label_handler(FILE *output_file,
   return 0;
 }
 
-static int opcode_handler(FILE *output_file, 
-			  char instruction[IDENTIFIER_MAX], 
+static int opcode_handler(FILE *output_file,
+			  char instruction[IDENTIFIER_MAX],
 			  const unsigned int line_number) {
 
   if (line_number == 1) {
