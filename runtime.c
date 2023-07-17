@@ -14,8 +14,6 @@ struct stack {
   word data[STACK_SIZE];
 };
 
-// TODO: Abort if index is out of bounds
-
 inline static void stack_push(struct stack* s, word value) {
   const word index = s->pointer++ % STACK_SIZE;
   s->data[index] = value;
@@ -23,7 +21,7 @@ inline static void stack_push(struct stack* s, word value) {
 
 inline static word stack_pop(struct stack* s) {
   const word index = --s->pointer % STACK_SIZE;
-  if (index < 0) dlt_fatal_error("data stack underflow");
+  if (index < 0) dlt_fatal_error("stack underflow");
   return s->data[index];
 }
 
@@ -33,19 +31,57 @@ inline static word stack_peek(struct stack* s) {
 }
 
 /* VM State */
-word instruction_pointer = 0;
 
+// Registers
+word instruction_pointer = 0;
+word r0 = 0;
+
+// Stacks
 struct stack* data_stack = &(struct stack) {
   .pointer = 0,
     .data = { 0 },
 };
 
-struct stack* call_stack = &(struct stack) {
+struct stack* return_stack = &(struct stack) {
   .pointer = 0,
     .data = { 0 },
 };
 
+// Memory
 word memory[MEMORY_SIZE] = { EXIT };
+
+// Helper functions
+inline static void push(word value) {
+  stack_push(data_stack, value);
+}
+
+inline static word pop(void) {
+  return stack_pop(data_stack);
+}
+
+inline static word peek(void) {
+  return stack_peek(data_stack);
+}
+
+inline static void rpush(word value) {
+  stack_push(return_stack, value);
+}
+
+inline static word rpop(void) {
+  return stack_pop(return_stack);
+}
+
+inline static word rpeek(void) {
+  return stack_peek(return_stack);
+}
+
+inline static void jump(word address) {
+  instruction_pointer = address;
+}
+
+inline static void jumpn(void) {
+  jump(memory[instruction_pointer + 1]);
+}
 
 static int init_memory(char *filename) {
   FILE* input_file = fopen(filename, "r");
@@ -85,62 +121,86 @@ int main(int argc, char* argv[]) {
     const word instruction = memory[instruction_pointer];
 
     switch (instruction) {
-    case FETCH: {
-      const word address = stack_pop(data_stack);
-      stack_push(data_stack, memory[address]);
-      break;
-    }
-    case STORE: {
-      const word address = stack_pop(data_stack);
-      memory[address] = stack_pop(data_stack);
-      break;
-    }
     case EXIT: {
       puts("VM exited normally");
       return 0;
     }
-    case ADD: {
-      stack_push(data_stack, stack_pop(data_stack) + stack_pop(data_stack));
-      break;
-    }
-    case SUBTRACT: {
-      const word value = stack_pop(data_stack);
-      stack_push(data_stack, stack_pop(data_stack) - value);
-      break;
-    }
-    case MULTIPLY: {
-      stack_push(data_stack, stack_pop(data_stack) * stack_pop(data_stack));
-      break;
-    }
-    case DIVIDE: {
-      const word value = stack_pop(data_stack);
-      stack_push(data_stack, value / stack_pop(data_stack));
-      break;
-    }
     case CONST: {
       ++instruction_pointer;
       const word value = memory[instruction_pointer];
-      stack_push(data_stack, value);
+      push(value);
       break;
     }
-    case JUMP: {
-      instruction_pointer = stack_pop(data_stack);
+    case FETCH: {
+      const word address = pop();
+      push(memory[address]);
+      break;
+    }
+    case STORE: {
+      const word address = pop();
+      memory[address] = pop();
+      break;
+    }
+    case ADD: {
+      push(pop() + pop());
+      break;
+    }
+    case SUBTRACT: {
+      const word value = pop();
+      push(pop() - value);
+      break;
+    }
+    case MULTIPLY: {
+      push(pop() * pop());
+      break;
+    }
+    case DIVIDE: {
+      const word value = pop();
+      push(value / pop());
+      break;
+    }
+    case DUP: {
+      push(peek());
+      break;
+    }
+    case DROP: {
+      pop();
+      break;
+    }
+     case JUMP: {
+      jump(pop());
       continue;
     }
     case JUMPN: {
-      const word value = memory[instruction_pointer + 1];
-      instruction_pointer = value;
+      jumpn();
       continue;
     }
-    case NOP: break;
+    case NOP: {
+      break;
+    }
+    case DOCOL: {
+      rpush(r0);
+      r0 = instruction_pointer;
+      jump(memory[++r0]);
+      continue;
+    }
+    case NEXT: {
+      jump(memory[++r0]);
+      continue;
+    }
+    case RETURN: {
+      r0 = rpop();
+      jump(memory[++r0]);
+      continue;
+    }
     default: {
       printf("Unknown instruction at memory location %d - aborting.", instruction_pointer);
       return -1;
     }
     }
 
-    printf("data stack -> %d\n", stack_peek(data_stack));
-
+    printf("data stack -> %d | return stack -> %d | ip = %d | r0 = %d\n",
+	   peek(), rpeek(), instruction_pointer, r0);
     ++instruction_pointer;
   }
 

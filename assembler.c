@@ -163,9 +163,8 @@ static int label_handler(FILE *output_file,
       return -1;
     }
 
-    fputs("const\n", output_file);
     fprintf(output_file, "%d\n", l->address);
-    address += 2;
+    ++address;
     break;
   }
   default: {

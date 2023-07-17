@@ -15,20 +15,36 @@
 # JMPN
 # @_start
 # as first two instructions
-:loop
+:exit
+	exit
+:return
+	return
+:dup
+	dup
+	next
+:add
+	add
+	next
+:double
+	docol
+	@dup
+	@add
+	@return
 
-:add-sub
-5
-8
-add
-1
-subtract
+:quadruple
+	docol
+	@double
+	@double
+	@exit
 
+# What I want:
+#:double
+#	docol
+#	dup
+#	add
+#	return
+	
 :_start
-:jump-target
-1
-nop
-2
-add
-
-@loop
+7
+!quadruple
+exit
