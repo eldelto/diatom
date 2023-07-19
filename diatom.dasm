@@ -29,6 +29,8 @@
 #	return
 	
 :_start
+const
 7
-!test
+jumpn
+@test
 exit

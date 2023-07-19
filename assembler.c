@@ -99,6 +99,42 @@ static int resolve_label(char name[IDENTIFIER_MAX],
   return 0;
 }
 
+static int macro(char instruction[IDENTIFIER_MAX],
+		 char *code_word,
+		 FILE *output_file,
+		 unsigned int address,
+		 unsigned int line_number) {
+  char *token = "";
+  unsigned int emitted_instructions = 0;
+
+  // Discard the first token.
+  strsep(&instruction, MACRO_SEPARATOR);
+  for (unsigned int i = 0;
+       (token = strsep(&instruction, MACRO_SEPARATOR)) != NULL; ++i) {
+    if (i == 0) {
+      // TODO: Call :label function
+      append_label(token, address);
+      fprintf(output_file, "# %s @ %d\n", token, address);
+
+      if (code_word != NULL) {
+	fputs(code_word, output_file);
+	fputs("\n", output_file);
+	++emitted_instructions;
+      }
+    } else {
+      int err = resolve_label(token, output_file, line_number);
+      if (err) return err;
+      ++emitted_instructions;
+    }
+  }
+
+  int err = resolve_label("return", output_file, line_number);
+  if (err) return err;
+  ++emitted_instructions;
+
+  return emitted_instructions;
+}
+
 typedef int (*line_handler)(FILE *output_file,
 			    char instruction[IDENTIFIER_MAX],
 			    const unsigned int line_number);
@@ -150,17 +186,6 @@ static int label_handler(FILE *output_file,
     fprintf(output_file, "# %s @ %d\n", instruction, address);
     break;
   }
-    // Jump to label
-  case '!': {
-    fputs("const\n", output_file);
-
-    int err = resolve_label(instruction + 1, output_file, line_number);
-    if (err) return err;
-
-    fputs("jump\n", output_file);
-    address += 3;
-    break;
-  }
   case '@': {
     int err = resolve_label(instruction + 1, output_file, line_number);
     if (err) return err;
@@ -169,28 +194,10 @@ static int label_handler(FILE *output_file,
   }
   case '.': {
     if (dlt_string_starts_with(instruction, ".colonword")) {
-      char *token = "";
+      int count = macro(instruction, "docol", output_file, address, line_number);
+      if (count < 0) return count;
 
-      strsep(&instruction, MACRO_SEPARATOR);
-      for (unsigned int i = 0;
-	   (token = strsep(&instruction, MACRO_SEPARATOR)) != NULL; ++i) {
-	if (i == 0) {
-	  // TODO: Call :label function
-	  append_label(token, address);
-	  fprintf(output_file, "# %s @ %d\n", token, address);
-	  fputs("docol\n", output_file);
-	} else {
-	  int err = resolve_label(token, output_file, line_number);
-	  if (err) return err;
-	}
-
-	++address;
-      }
-
-      int err = resolve_label("return", output_file, line_number);
-      if (err) return err;
-
-      ++address;
+      address += count;
     } else {
       char err_msg[100] = "";
       snprintf(err_msg, 100, "line %d: Macro '%s' does not exist", line_number, instruction);
@@ -202,7 +209,6 @@ static int label_handler(FILE *output_file,
   default: {
     if (isdigit(instruction[0]) || instruction[0] == '-') {
       int number = atoi(instruction);
-      fputs("const\n", output_file);
       fprintf(output_file, "%d\n", number);
       address += 2;
     } else {

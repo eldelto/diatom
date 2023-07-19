@@ -190,6 +190,7 @@ int main(int argc, char* argv[]) {
     }
     case RETURN: {
       r0 = rpop();
+      // Implicit NEXT
       jump(memory[++r0]);
       continue;
     }
