@@ -2,12 +2,9 @@
 	exit
 :return
 	return
-:_dictdup
-	dup
-	next
-:_dictadd
-	add
-	next
+
+.codeword dup dup
+.codeword add add
 
 .colonword double dup add
 .colonword quadruple double double

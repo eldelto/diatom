@@ -1,6 +1,7 @@
 #include <ctype.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -107,6 +108,8 @@ static struct label last_word_label = {
 };
 static int dictionary_macro(char instruction[IDENTIFIER_MAX],
 			    char *code_word,
+			    char *end_word,
+			    bool resolve_address,
 			    FILE *output_file,
 			    unsigned int start_address,
 			    unsigned int line_number) {
@@ -150,18 +153,29 @@ static int dictionary_macro(char instruction[IDENTIFIER_MAX],
 	++address;
       }
     } else {
-      char dict_label[IDENTIFIER_MAX] = "_dict";
-      strlcat(dict_label, token, sizeof(dict_label));
+      if (resolve_address) {
+	char dict_label[IDENTIFIER_MAX] = "_dict";
+	strlcat(dict_label, token, sizeof(dict_label));
 
-      int err = resolve_label(dict_label, output_file, line_number);
-      if (err) return err;
+	int err = resolve_label(dict_label, output_file, line_number);
+	if (err) return err;
+      } else {
+	fputs(token, output_file);
+	fputs("\n", output_file);
+      }
+
       ++address;
     }
   }
 
   // Return from the current word.
-  int err = resolve_label("return", output_file, line_number);
-  if (err) return err;
+  if (resolve_address) {
+    int err = resolve_label(end_word, output_file, line_number);
+    if (err) return err;
+  } else {
+    fputs(end_word, output_file);
+    fputs("\n", output_file);
+  }
   ++address;
 
   return address - start_address;
@@ -226,7 +240,12 @@ static int label_handler(FILE *output_file,
   }
   case '.': {
     if (dlt_string_starts_with(instruction, ".colonword")) {
-      int count = dictionary_macro(instruction, "docol", output_file, address, line_number);
+      int count = dictionary_macro(instruction, "docol", "return", true, output_file, address, line_number);
+      if (count < 0) return count;
+
+      address += count;
+    } else if (dlt_string_starts_with(instruction, ".codeword")) {
+      int count = dictionary_macro(instruction, NULL, "next", false, output_file, address, line_number);
       if (count < 0) return count;
 
       address += count;
