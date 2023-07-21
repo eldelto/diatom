@@ -2,31 +2,20 @@
 	exit
 :return
 	return
-:dup
+:_dictdup
 	dup
 	next
-:add
+:_dictadd
 	add
 	next
-:double
-	docol
-	@dup
-	@add
-	@return
 
-.colonword triple dup dup add add
+.colonword double dup add
+.colonword quadruple double double
 
 :test
 	docol
-	@triple
+	@_dictquadruple
 	@exit
-
-# What I want:
-#:double
-#	docol
-#	dup
-#	add
-#	return
 	
 :_start
 const

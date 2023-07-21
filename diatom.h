@@ -5,6 +5,8 @@
 
 #define INSTRUCTION_COUNT 16
 #define INSTRUCTION_NAME_MAX 10
+#define WORD_NAME_MAX 10
+
 enum instructions {
   EXIT,
   CONST,
@@ -49,5 +51,7 @@ int name_to_opcode(char* name) {
 
     return -1;
 }
+
+typedef unsigned int word;
 
 #endif

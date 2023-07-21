@@ -28,7 +28,7 @@ struct label labels[LABELS_MAX] = {
 };
 
 size_t label_offset = 0;
-static void append_label(char name[IDENTIFIER_MAX], unsigned int address) {
+static struct label append_label(char name[IDENTIFIER_MAX], unsigned int address) {
   struct label l = {
     .name = "",
     .address = address,
@@ -38,6 +38,8 @@ static void append_label(char name[IDENTIFIER_MAX], unsigned int address) {
 
   if (label_offset == (LABELS_MAX - 1)) dlt_fatal_error("maximum number of labels");
   ++label_offset;
+
+  return l;
 }
 
 static const struct label * find_label(const char *const name) {
@@ -99,13 +101,17 @@ static int resolve_label(char name[IDENTIFIER_MAX],
   return 0;
 }
 
-static int macro(char instruction[IDENTIFIER_MAX],
-		 char *code_word,
-		 FILE *output_file,
-		 unsigned int address,
-		 unsigned int line_number) {
+static struct label last_word_label = {
+  .name = "",
+  .address = 0,
+};
+static int dictionary_macro(char instruction[IDENTIFIER_MAX],
+			    char *code_word,
+			    FILE *output_file,
+			    unsigned int start_address,
+			    unsigned int line_number) {
   char *token = "";
-  unsigned int emitted_instructions = 0;
+  unsigned int address = start_address;
 
   // Discard the first token.
   strsep(&instruction, MACRO_SEPARATOR);
@@ -113,26 +119,52 @@ static int macro(char instruction[IDENTIFIER_MAX],
        (token = strsep(&instruction, MACRO_SEPARATOR)) != NULL; ++i) {
     if (i == 0) {
       // TODO: Call :label function
-      append_label(token, address);
-      fprintf(output_file, "# %s @ %d\n", token, address);
+      struct label word_label = append_label(token, address);
+      fprintf(output_file, "# :%s @ %d\n", token, address);
+
+      // Insert address of the previous word.
+      fprintf(output_file, "%d\n", last_word_label.address);
+      last_word_label = word_label;
+      ++address;
+
+      // Insert the length and name of the word.
+      const word word_len = strnlen(token, WORD_NAME_MAX);
+      fprintf(output_file, "%d\n", word_len);
+      ++address;
+
+      for (unsigned int i = 0; i < word_len; ++i) {
+	fprintf(output_file, "%d\n", (word)token[i]);
+	++address;
+      }
+
+      // Insert the code word.
+      char dict_label[IDENTIFIER_MAX] = "_dict";
+      strlcat(dict_label, token, sizeof(dict_label));
+      // TODO: Call :label function
+      append_label(dict_label, address);
+      fprintf(output_file, "# :%s @ %d\n", dict_label, address);
 
       if (code_word != NULL) {
 	fputs(code_word, output_file);
 	fputs("\n", output_file);
-	++emitted_instructions;
+	++address;
       }
     } else {
-      int err = resolve_label(token, output_file, line_number);
+      char dict_label[IDENTIFIER_MAX] = "_dict";
+      strlcat(dict_label, token, sizeof(dict_label));
+
+      int err = resolve_label(dict_label, output_file, line_number);
       if (err) return err;
-      ++emitted_instructions;
+      ++address;
     }
   }
 
+  // Return from the current word.
   int err = resolve_label("return", output_file, line_number);
   if (err) return err;
-  ++emitted_instructions;
+  ++address;
 
-  return emitted_instructions;
+  return address - start_address;
 }
 
 typedef int (*line_handler)(FILE *output_file,
@@ -158,7 +190,7 @@ static int translate_file(FILE *input_file, FILE *output_file, line_handler hand
 
       break;
     }
-    strlcpy(instruction, line, sizeof(instruction) - 1);
+    strlcpy(instruction, line, sizeof(instruction));
 
     if((err = handler(output_file, instruction, line_number))) break;
   }
@@ -194,7 +226,7 @@ static int label_handler(FILE *output_file,
   }
   case '.': {
     if (dlt_string_starts_with(instruction, ".colonword")) {
-      int count = macro(instruction, "docol", output_file, address, line_number);
+      int count = dictionary_macro(instruction, "docol", output_file, address, line_number);
       if (count < 0) return count;
 
       address += count;
