@@ -28,7 +28,7 @@ struct label labels[LABELS_MAX] = {
   }
 };
 
-size_t label_offset = 0;
+static size_t label_offset = 0;
 static struct label append_label(char name[IDENTIFIER_MAX], unsigned int address) {
   struct label l = {
     .name = "",
@@ -73,6 +73,7 @@ static int replace_extension(char *input_filename,
   return 0;
 }
 
+// TODO: Move to util.h
 static void trim_string(char *string){
   if (string == NULL || strnlen(string, IDENTIFIER_MAX) == 0) return;
 
@@ -102,83 +103,63 @@ static int resolve_label(char name[IDENTIFIER_MAX],
   return 0;
 }
 
-static struct label last_word_label = {
-  .name = "",
-  .address = 0,
-};
+static char last_word_label[IDENTIFIER_MAX] = "";
 static int dictionary_macro(char instruction[IDENTIFIER_MAX],
 			    char *code_word,
+			    bool are_params_labels,
 			    char *end_word,
-			    bool resolve_address,
-			    FILE *output_file,
-			    unsigned int start_address,
-			    unsigned int line_number) {
+			    FILE *output_file) {
   char *token = "";
-  unsigned int address = start_address;
 
   // Discard the first token.
   strsep(&instruction, MACRO_SEPARATOR);
-  for (unsigned int i = 0;
-       (token = strsep(&instruction, MACRO_SEPARATOR)) != NULL; ++i) {
-    if (i == 0) {
-      // TODO: Call :label function
-      struct label word_label = append_label(token, address);
-      fprintf(output_file, "# :%s @ %d\n", token, address);
 
-      // Insert address of the previous word.
-      fprintf(output_file, "%d\n", last_word_label.address);
-      last_word_label = word_label;
-      ++address;
+  // Insert the start label.
+  token = strsep(&instruction, MACRO_SEPARATOR);
+  if (token == NULL) return dlt_error("Failed to resolve macro: no parameters");
+  fprintf(output_file, ":%s\n", token);
 
-      // Insert the length and name of the word.
-      const word word_len = strnlen(token, WORD_NAME_MAX);
-      fprintf(output_file, "%d\n", word_len);
-      ++address;
+  // Insert address of the previous word.
+  if (last_word_label[0] == '\0') fputs("0\n", output_file);
+  else {
+    char dict_label[IDENTIFIER_MAX] = "@_dict";
+    strlcat(dict_label, last_word_label, sizeof(dict_label));
+    fputs(dict_label, output_file);
+    fputs("\n", output_file);
+  }
+  strlcpy(last_word_label, token, sizeof(last_word_label));
 
-      for (unsigned int i = 0; i < word_len; ++i) {
-	fprintf(output_file, "%d\n", (word)token[i]);
-	++address;
-      }
+  // Insert the length and name of the word.
+  const word word_len = strnlen(token, WORD_NAME_MAX);
+  fprintf(output_file, "%d\n", word_len);
 
-      // Insert the code word.
-      char dict_label[IDENTIFIER_MAX] = "_dict";
-      strlcat(dict_label, token, sizeof(dict_label));
-      // TODO: Call :label function
-      append_label(dict_label, address);
-      fprintf(output_file, "# :%s @ %d\n", dict_label, address);
+  for (unsigned int i = 0; i < word_len; ++i)
+    fprintf(output_file, "%d\n", (word)token[i]);
 
-      if (code_word != NULL) {
-	fputs(code_word, output_file);
-	fputs("\n", output_file);
-	++address;
-      }
-    } else {
-      if (resolve_address) {
-	char dict_label[IDENTIFIER_MAX] = "_dict";
-	strlcat(dict_label, token, sizeof(dict_label));
+  // Insert the code word.
+  char dict_label[IDENTIFIER_MAX] = ":_dict";
+  strlcat(dict_label, token, sizeof(dict_label));
+  fputs(dict_label, output_file);
+  fputs("\n", output_file);
+	
+  if (code_word != NULL) {
+    fputs(code_word, output_file);
+    fputs("\n", output_file);
+  }
 
-	int err = resolve_label(dict_label, output_file, line_number);
-	if (err) return err;
-      } else {
-	fputs(token, output_file);
-	fputs("\n", output_file);
-      }
-
-      ++address;
+  while((token = strsep(&instruction, MACRO_SEPARATOR)) != NULL) {
+    if (are_params_labels) fprintf(output_file, "@_dict%s\n", token);
+    else {
+      fputs(token, output_file);
+      fputs("\n", output_file);
     }
   }
 
   // Return from the current word.
-  if (resolve_address) {
-    int err = resolve_label(end_word, output_file, line_number);
-    if (err) return err;
-  } else {
-    fputs(end_word, output_file);
-    fputs("\n", output_file);
-  }
-  ++address;
+  fputs(end_word, output_file);
+  fputs("\n", output_file);
 
-  return address - start_address;
+  return 0;
 }
 
 typedef int (*line_handler)(FILE *output_file,
@@ -214,6 +195,38 @@ static int translate_file(FILE *input_file, FILE *output_file, line_handler hand
   return err;
 }
 
+static int macro_handler(FILE *output_file,
+			 char instruction[IDENTIFIER_MAX],
+			 const unsigned int line_number) {
+  switch (instruction[0]) {
+    // Empty line
+  case '\0': break;
+    // Comment
+  case '#': break;
+    // Label creation
+  case '.': {
+    if (dlt_string_starts_with(instruction, ".colonword")) {
+      int err = dictionary_macro(instruction, "docol", true, "@return", output_file);
+      if (err) return err;
+    } else if (dlt_string_starts_with(instruction, ".codeword")) {
+      int err = dictionary_macro(instruction, NULL, false, "next", output_file);
+      if (err) return err;
+    } else if (dlt_string_starts_with(instruction, ".varsss")) {
+      int err = dictionary_macro(instruction, "nop", false, "next", output_file);
+      if (err) return err;
+    } else {
+      char err_msg[100] = "";
+      snprintf(err_msg, 100, "line %d: Macro '%s' does not exist", line_number, instruction);
+      return dlt_error(err_msg);
+    }
+    break;
+  }
+  default: fprintf(output_file, "%s\n", instruction);
+  }
+
+  return 0;
+}
+
 static int label_handler(FILE *output_file,
 			 char instruction[IDENTIFIER_MAX],
 			 const unsigned int line_number) {
@@ -238,30 +251,11 @@ static int label_handler(FILE *output_file,
     ++address;
     break;
   }
-  case '.': {
-    if (dlt_string_starts_with(instruction, ".colonword")) {
-      int count = dictionary_macro(instruction, "docol", "return", true, output_file, address, line_number);
-      if (count < 0) return count;
-
-      address += count;
-    } else if (dlt_string_starts_with(instruction, ".codeword")) {
-      int count = dictionary_macro(instruction, NULL, "next", false, output_file, address, line_number);
-      if (count < 0) return count;
-
-      address += count;
-    } else {
-      char err_msg[100] = "";
-      snprintf(err_msg, 100, "line %d: Macro '%s' does not exist", line_number, instruction);
-      return dlt_error(err_msg);
-    }
-
-    break;
-  }
   default: {
     if (isdigit(instruction[0]) || instruction[0] == '-') {
       int number = atoi(instruction);
       fprintf(output_file, "%d\n", number);
-      address += 2;
+      ++address;
     } else {
       if (name_to_opcode(instruction) < 0) {
 	char err_msg[100] = "";
@@ -363,12 +357,15 @@ int main(int argc, char* argv[]) {
   }
 
   char *dasm_filename = argv[1];
+  char dexp_filename[IDENTIFIER_MAX] = "";
   char dins_filename[IDENTIFIER_MAX] = "";
   char dopc_filename[IDENTIFIER_MAX] = "";
+  if (replace_extension(dasm_filename, dexp_filename, ".dexp")) dlt_panic();
   if (replace_extension(dasm_filename, dins_filename, ".dins")) dlt_panic();
   if (replace_extension(dasm_filename, dopc_filename, ".dopc")) dlt_panic();
 
-  if (create_output_file(dasm_filename, dins_filename, label_handler, "w")) dlt_panic();
+  if (create_output_file(dasm_filename, dexp_filename, macro_handler, "w")) dlt_panic();
+  if (create_output_file(dexp_filename, dins_filename, label_handler, "w")) dlt_panic();
   if (create_output_file(dins_filename, dopc_filename, opcode_handler, "wb")) dlt_panic();
 
   return EXIT_SUCCESS;

@@ -3,14 +3,32 @@
 :return
 	return
 
+#:var
+#	nop
+#	const
+#	@var
+
+:x
+	2
+:_dictx
+	const
+	@x
+	next
+
+.codeword fetch fetch
 .codeword dup dup
 .codeword add add
 
+#.var beast 666
+
+.colonword add-x x fetch add
 .colonword double dup add
 .colonword quadruple double double
 
+
 :test
 	docol
+	@_dictadd-x
 	@_dictquadruple
 	@exit
 	

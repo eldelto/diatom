@@ -119,6 +119,9 @@ int main(int argc, char* argv[]) {
   while (instruction_pointer < MEMORY_SIZE) {
     const word instruction = memory[instruction_pointer];
 
+    printf("ds -> %d | rs -> %d | ip = %d | r0 = %d | instr = %s\n",
+	   peek(), rpeek(), instruction_pointer, r0, instruction_names[instruction]);
+
     switch (instruction) {
     case EXIT: {
       puts("VM exited normally");
@@ -180,6 +183,7 @@ int main(int argc, char* argv[]) {
     case DOCOL: {
       rpush(r0);
       r0 = instruction_pointer;
+      // Implicit NEXT
       jump(memory[++r0]);
       continue;
     }
@@ -199,8 +203,6 @@ int main(int argc, char* argv[]) {
     }
     }
 
-    printf("data stack -> %d | return stack -> %d | ip = %d | r0 = %d\n",
-	   peek(), rpeek(), instruction_pointer, r0);
     ++instruction_pointer;
   }
 
