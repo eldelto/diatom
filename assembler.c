@@ -104,6 +104,69 @@ static int resolve_label(char name[IDENTIFIER_MAX],
 }
 
 static char last_word_label[IDENTIFIER_MAX] = "";
+static int dictionary_header(char *word_name, FILE *output_file) {
+  // Insert the start label.
+  fprintf(output_file, ":%s\n", word_name);
+
+  // Insert address of the previous word.
+  if (last_word_label[0] == '\0') fputs("0\n", output_file);
+  else {
+    char dict_label[IDENTIFIER_MAX] = "@_dict";
+    strlcat(dict_label, last_word_label, sizeof(dict_label));
+    fputs(dict_label, output_file);
+    fputs("\n", output_file);
+  }
+  strlcpy(last_word_label, word_name, sizeof(last_word_label));
+
+  // Insert the length and name of the word.
+  const word word_len = strnlen(word_name, WORD_NAME_MAX);
+  fprintf(output_file, "%d\n", word_len);
+
+  for (unsigned int i = 0; i < word_len; ++i)
+    fprintf(output_file, "%d\n", (word)word_name[i]);
+
+  return 0;
+}
+
+static int var_macro(char instruction[IDENTIFIER_MAX],
+		     FILE *output_file,
+		     unsigned int line_number) {
+  // Discard the '.var' part.
+  strsep(&instruction, MACRO_SEPARATOR);
+  
+  char *name = strsep(&instruction, MACRO_SEPARATOR);
+  if (name == NULL) {
+    char err_msg[100] = "";
+    snprintf(err_msg, 100, "line %d: .var macro requires name parameter. \n"
+	     "Usage: .var [name] [value]", line_number);
+    return dlt_error(err_msg);
+  }
+      
+  char *value = strsep(&instruction, MACRO_SEPARATOR);
+  if (value == NULL) {
+    char err_msg[100] = "";
+    snprintf(err_msg, 100, "line %d: .var macro requires value parameter. \n"
+	     "Usage: .var [name] [value]", line_number);
+    return dlt_error(err_msg);
+  }
+
+  // Emit the value.
+  fprintf(output_file, ":_var%s\n"
+	  "%s\n", name, value);
+  
+  int err = dictionary_header(name, output_file);
+  if (err) return err;
+
+  // Emit the code to push the address on the data stack.
+  fprintf(output_file,
+	  ":_dict%s\n"
+	  "const\n"
+	  "@_var%s\n"
+	  "next\n", name, name);
+
+  return 0;
+}
+
 static int dictionary_macro(char instruction[IDENTIFIER_MAX],
 			    char *code_word,
 			    bool are_params_labels,
@@ -211,8 +274,8 @@ static int macro_handler(FILE *output_file,
     } else if (dlt_string_starts_with(instruction, ".codeword")) {
       int err = dictionary_macro(instruction, NULL, false, "next", output_file);
       if (err) return err;
-    } else if (dlt_string_starts_with(instruction, ".varsss")) {
-      int err = dictionary_macro(instruction, "nop", false, "next", output_file);
+    } else if (dlt_string_starts_with(instruction, ".var")) {
+      int err = var_macro(instruction, output_file, line_number);
       if (err) return err;
     } else {
       char err_msg[100] = "";

@@ -19,9 +19,9 @@
 .codeword dup dup
 .codeword add add
 
-#.var beast 666
+.var beast 666
 
-.colonword add-x x fetch add
+.colonword add-x beast fetch add
 .colonword double dup add
 .colonword quadruple double double
 
