@@ -133,7 +133,7 @@ static int codeword_macro(char instruction[IDENTIFIER_MAX],
 		     unsigned int line_number) {
   // Discard the '.codeword' part.
   strsep(&instruction, MACRO_SEPARATOR);
-  
+
   char *name = strsep(&instruction, MACRO_SEPARATOR);
   if (name == NULL) {
     char err_msg[100] = "";
@@ -141,13 +141,13 @@ static int codeword_macro(char instruction[IDENTIFIER_MAX],
 	     "Usage: .codeword [name] [instructions...]", line_number);
     return dlt_error(err_msg);
   }
-      
+
   int err = dictionary_header(name, output_file);
   if (err) return err;
 
   // Emit the remaining instructions.
   fprintf(output_file, ":_dict%s\n", name);
-  
+
   char *token = NULL;
   while((token = strsep(&instruction, MACRO_SEPARATOR)) != NULL) {
     fputs(token, output_file);
@@ -160,12 +160,43 @@ static int codeword_macro(char instruction[IDENTIFIER_MAX],
   return 0;
 }
 
+static int colonword_macro(char instruction[IDENTIFIER_MAX],
+		     FILE *output_file,
+		     unsigned int line_number) {
+  // Discard the '.colonword' part.
+  strsep(&instruction, MACRO_SEPARATOR);
+
+  char *name = strsep(&instruction, MACRO_SEPARATOR);
+  if (name == NULL) {
+    char err_msg[100] = "";
+    snprintf(err_msg, 100, "line %d: .colonword macro requires name parameter. \n"
+	     "Usage: .colonword [name] [words...]", line_number);
+    return dlt_error(err_msg);
+  }
+
+  int err = dictionary_header(name, output_file);
+  if (err) return err;
+
+   // Emit the remaining instructions.
+  fprintf(output_file, ":_dict%s\n", name);
+  fputs("docol\n", output_file);
+
+  char *token = NULL;
+  while((token = strsep(&instruction, MACRO_SEPARATOR)) != NULL)
+    fprintf(output_file, "@_dict%s\n", token);
+
+  // Return from the colonword by calling return.
+  fputs("@return\n", output_file);
+
+  return 0;
+}
+
 static int var_macro(char instruction[IDENTIFIER_MAX],
 		     FILE *output_file,
 		     unsigned int line_number) {
   // Discard the '.var' part.
   strsep(&instruction, MACRO_SEPARATOR);
-  
+
   char *name = strsep(&instruction, MACRO_SEPARATOR);
   if (name == NULL) {
     char err_msg[100] = "";
@@ -173,7 +204,7 @@ static int var_macro(char instruction[IDENTIFIER_MAX],
 	     "Usage: .var [name] [value]", line_number);
     return dlt_error(err_msg);
   }
-      
+
   char *value = strsep(&instruction, MACRO_SEPARATOR);
   if (value == NULL) {
     char err_msg[100] = "";
@@ -185,7 +216,7 @@ static int var_macro(char instruction[IDENTIFIER_MAX],
   // Emit the value.
   fprintf(output_file, ":_var%s\n"
 	  "%s\n", name, value);
-  
+
   int err = dictionary_header(name, output_file);
   if (err) return err;
 
@@ -195,64 +226,6 @@ static int var_macro(char instruction[IDENTIFIER_MAX],
 	  "const\n"
 	  "@_var%s\n"
 	  "next\n", name, name);
-
-  return 0;
-}
-
-static int dictionary_macro(char instruction[IDENTIFIER_MAX],
-			    char *code_word,
-			    bool are_params_labels,
-			    char *end_word,
-			    FILE *output_file) {
-  char *token = "";
-
-  // Discard the first token.
-  strsep(&instruction, MACRO_SEPARATOR);
-
-  // Insert the start label.
-  token = strsep(&instruction, MACRO_SEPARATOR);
-  if (token == NULL) return dlt_error("Failed to resolve macro: no parameters");
-  fprintf(output_file, ":%s\n", token);
-
-  // Insert address of the previous word.
-  if (last_word_label[0] == '\0') fputs("0\n", output_file);
-  else {
-    char dict_label[IDENTIFIER_MAX] = "@_dict";
-    strlcat(dict_label, last_word_label, sizeof(dict_label));
-    fputs(dict_label, output_file);
-    fputs("\n", output_file);
-  }
-  strlcpy(last_word_label, token, sizeof(last_word_label));
-
-  // Insert the length and name of the word.
-  const word word_len = strnlen(token, WORD_NAME_MAX);
-  fprintf(output_file, "%d\n", word_len);
-
-  for (unsigned int i = 0; i < word_len; ++i)
-    fprintf(output_file, "%d\n", (word)token[i]);
-
-  // Insert the code word.
-  char dict_label[IDENTIFIER_MAX] = ":_dict";
-  strlcat(dict_label, token, sizeof(dict_label));
-  fputs(dict_label, output_file);
-  fputs("\n", output_file);
-	
-  if (code_word != NULL) {
-    fputs(code_word, output_file);
-    fputs("\n", output_file);
-  }
-
-  while((token = strsep(&instruction, MACRO_SEPARATOR)) != NULL) {
-    if (are_params_labels) fprintf(output_file, "@_dict%s\n", token);
-    else {
-      fputs(token, output_file);
-      fputs("\n", output_file);
-    }
-  }
-
-  // Return from the current word.
-  fputs(end_word, output_file);
-  fputs("\n", output_file);
 
   return 0;
 }
@@ -301,7 +274,7 @@ static int macro_handler(FILE *output_file,
     // Label creation
   case '.': {
     if (dlt_string_starts_with(instruction, ".colonword")) {
-      int err = dictionary_macro(instruction, "docol", true, "@return", output_file);
+      int err = colonword_macro(instruction, output_file, line_number);
       if (err) return err;
     } else if (dlt_string_starts_with(instruction, ".codeword")) {
       int err = codeword_macro(instruction, output_file, line_number);
