@@ -111,7 +111,7 @@ static int dictionary_header(char *word_name, FILE *output_file) {
   // Insert address of the previous word.
   if (last_word_label[0] == '\0') fputs("0\n", output_file);
   else {
-    char dict_label[IDENTIFIER_MAX] = "@_dict";
+    char dict_label[IDENTIFIER_MAX] = "@";
     strlcat(dict_label, last_word_label, sizeof(dict_label));
     fputs(dict_label, output_file);
     fputs("\n", output_file);
@@ -124,6 +124,38 @@ static int dictionary_header(char *word_name, FILE *output_file) {
 
   for (unsigned int i = 0; i < word_len; ++i)
     fprintf(output_file, "%d\n", (word)word_name[i]);
+
+  return 0;
+}
+
+static int codeword_macro(char instruction[IDENTIFIER_MAX],
+		     FILE *output_file,
+		     unsigned int line_number) {
+  // Discard the '.codeword' part.
+  strsep(&instruction, MACRO_SEPARATOR);
+  
+  char *name = strsep(&instruction, MACRO_SEPARATOR);
+  if (name == NULL) {
+    char err_msg[100] = "";
+    snprintf(err_msg, 100, "line %d: .codeword macro requires name parameter. \n"
+	     "Usage: .codeword [name] [instructions...]", line_number);
+    return dlt_error(err_msg);
+  }
+      
+  int err = dictionary_header(name, output_file);
+  if (err) return err;
+
+  // Emit the remaining instructions.
+  fprintf(output_file, ":_dict%s\n", name);
+  
+  char *token = NULL;
+  while((token = strsep(&instruction, MACRO_SEPARATOR)) != NULL) {
+    fputs(token, output_file);
+    fputs("\n", output_file);
+  }
+
+  // Return from the codeword by calling next.
+  fputs("next\n", output_file);
 
   return 0;
 }
@@ -272,7 +304,7 @@ static int macro_handler(FILE *output_file,
       int err = dictionary_macro(instruction, "docol", true, "@return", output_file);
       if (err) return err;
     } else if (dlt_string_starts_with(instruction, ".codeword")) {
-      int err = dictionary_macro(instruction, NULL, false, "next", output_file);
+      int err = codeword_macro(instruction, output_file, line_number);
       if (err) return err;
     } else if (dlt_string_starts_with(instruction, ".var")) {
       int err = var_macro(instruction, output_file, line_number);
