@@ -5,7 +5,7 @@
 #include "util.h"
 
 #define STACK_SIZE  10
-#define MEMORY_SIZE 100
+#define MEMORY_SIZE 1000
 
 /* Stacks */
 struct stack {

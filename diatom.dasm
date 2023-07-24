@@ -20,8 +20,9 @@
 .codeword add add
 
 .var beast 666
+.const one 1
 
-.colonword add-x beast fetch add
+.colonword add-x beast fetch add one add
 .colonword double dup add
 .colonword quadruple double double
 

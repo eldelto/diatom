@@ -215,6 +215,35 @@ static int var_macro(char instruction[IDENTIFIER_MAX],
   return 0;
 }
 
+static int const_macro(char instruction[IDENTIFIER_MAX],
+		     FILE *output_file,
+		     unsigned int line_number) {
+  // Discard the '.const' part.
+  strsep(&instruction, MACRO_SEPARATOR);
+
+  char *name = strsep(&instruction, MACRO_SEPARATOR);
+  if (name == NULL)
+    return dlt_errorf("line %d: .const macro requires name parameter. \n"
+	     "Usage: .const [name] [value]", line_number);
+
+  char *value = strsep(&instruction, MACRO_SEPARATOR);
+  if (value == NULL)
+    return dlt_errorf("line %d: .const macro requires value parameter. \n"
+	     "Usage: .const [name] [value]", line_number);
+
+  int err = dictionary_header(name, output_file);
+  if (err) return err;
+
+  // Emit the code to push the value on the data stack.
+  fprintf(output_file,
+	  ":_dict%s\n"
+	  "const\n"
+	  "%s\n"
+	  "next\n", name, value);
+
+  return 0;
+}
+
 typedef int (*line_handler)(FILE *output_file,
 			    char instruction[IDENTIFIER_MAX],
 			    const unsigned int line_number);
@@ -263,6 +292,9 @@ static int macro_handler(FILE *output_file,
       if (err) return err;
     } else if (dlt_string_starts_with(instruction, ".var")) {
       int err = var_macro(instruction, output_file, line_number);
+      if (err) return err;
+    } else if (dlt_string_starts_with(instruction, ".const")) {
+      int err = const_macro(instruction, output_file, line_number);
       if (err) return err;
     } else {
       return dlt_errorf("line %d: Macro '%s' does not exist", line_number, instruction);
