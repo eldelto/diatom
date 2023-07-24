@@ -1,14 +1,16 @@
 #ifndef DELTO_UTIL
 #define DELTO_UTIL
 
+#include <stdarg.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
+
 
 /* Error handling */
 static char error_msg[100] = "";
 
-static int dlt_error(char msg[100]) {
+int dlt_error(char msg[100]) {
     strlcpy(error_msg, msg, sizeof(error_msg));
     return -1;
 }
@@ -27,6 +29,17 @@ void dlt_fatal_error(char msg[100]) {
 
 void dlt_panic_on_error(void) {
     if (error_msg[0] != '\0') dlt_panic();
+}
+
+int dlt_errorf(const char * restrict format, ...) {
+  va_list ap;
+  va_start(ap, format);
+
+  if (vsnprintf(error_msg, sizeof(error_msg), format, ap) < 0)
+    dlt_fatal_error("Failed to create errorf message.");
+
+  va_end(ap);
+  return -1;
 }
 
 /* String functions */

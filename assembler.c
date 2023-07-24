@@ -93,11 +93,8 @@ static int resolve_label(char name[IDENTIFIER_MAX],
 			 FILE *output_file,
 			 unsigned int line_number) {
   const struct label* const l = find_label(name);
-  if (l == NULL) {
-    char err_msg[100] = "";
-    snprintf(err_msg, 100, "line %d: Label '%s' does not exist", line_number, name);
-    return dlt_error(err_msg);
-  }
+  if (l == NULL)
+    return dlt_errorf("line %d: Label '%s' does not exist", line_number, name);
 
   fprintf(output_file, "%d\n", l->address);
   return 0;
@@ -135,12 +132,9 @@ static int codeword_macro(char instruction[IDENTIFIER_MAX],
   strsep(&instruction, MACRO_SEPARATOR);
 
   char *name = strsep(&instruction, MACRO_SEPARATOR);
-  if (name == NULL) {
-    char err_msg[100] = "";
-    snprintf(err_msg, 100, "line %d: .codeword macro requires name parameter. \n"
+  if (name == NULL)
+    return dlt_errorf("line %d: .codeword macro requires name parameter. \n"
 	     "Usage: .codeword [name] [instructions...]", line_number);
-    return dlt_error(err_msg);
-  }
 
   int err = dictionary_header(name, output_file);
   if (err) return err;
@@ -167,12 +161,9 @@ static int colonword_macro(char instruction[IDENTIFIER_MAX],
   strsep(&instruction, MACRO_SEPARATOR);
 
   char *name = strsep(&instruction, MACRO_SEPARATOR);
-  if (name == NULL) {
-    char err_msg[100] = "";
-    snprintf(err_msg, 100, "line %d: .colonword macro requires name parameter. \n"
+  if (name == NULL)
+    return dlt_errorf("line %d: .colonword macro requires name parameter. \n"
 	     "Usage: .colonword [name] [words...]", line_number);
-    return dlt_error(err_msg);
-  }
 
   int err = dictionary_header(name, output_file);
   if (err) return err;
@@ -198,20 +189,14 @@ static int var_macro(char instruction[IDENTIFIER_MAX],
   strsep(&instruction, MACRO_SEPARATOR);
 
   char *name = strsep(&instruction, MACRO_SEPARATOR);
-  if (name == NULL) {
-    char err_msg[100] = "";
-    snprintf(err_msg, 100, "line %d: .var macro requires name parameter. \n"
+  if (name == NULL)
+    return dlt_errorf("line %d: .var macro requires name parameter. \n"
 	     "Usage: .var [name] [value]", line_number);
-    return dlt_error(err_msg);
-  }
 
   char *value = strsep(&instruction, MACRO_SEPARATOR);
-  if (value == NULL) {
-    char err_msg[100] = "";
-    snprintf(err_msg, 100, "line %d: .var macro requires value parameter. \n"
+  if (value == NULL)
+    return dlt_errorf("line %d: .var macro requires value parameter. \n"
 	     "Usage: .var [name] [value]", line_number);
-    return dlt_error(err_msg);
-  }
 
   // Emit the value.
   fprintf(output_file, ":_var%s\n"
@@ -247,10 +232,7 @@ static int translate_file(FILE *input_file, FILE *output_file, line_handler hand
 
     trim_string(line);
     if (line_len > IDENTIFIER_MAX) {
-      char err_msg[100] = "";
-      snprintf(err_msg, 100, "line %d: Identifier exceeds max length", line_number);
-      err = dlt_error(err_msg);
-
+      err = dlt_errorf("line %d: Identifier exceeds max length", line_number);
       break;
     }
     strlcpy(instruction, line, sizeof(instruction));
@@ -283,9 +265,7 @@ static int macro_handler(FILE *output_file,
       int err = var_macro(instruction, output_file, line_number);
       if (err) return err;
     } else {
-      char err_msg[100] = "";
-      snprintf(err_msg, 100, "line %d: Macro '%s' does not exist", line_number, instruction);
-      return dlt_error(err_msg);
+      return dlt_errorf("line %d: Macro '%s' does not exist", line_number, instruction);
     }
     break;
   }
@@ -325,11 +305,9 @@ static int label_handler(FILE *output_file,
       fprintf(output_file, "%d\n", number);
       ++address;
     } else {
-      if (name_to_opcode(instruction) < 0) {
-	char err_msg[100] = "";
-	snprintf(err_msg, 100, "line %d: '%s' is not a valid instruction", line_number, instruction);
-	return dlt_error(err_msg);
-      }
+      if (name_to_opcode(instruction) < 0)
+	return dlt_errorf("line %d: '%s' is not a valid instruction",
+			  line_number, instruction);
 
       fprintf(output_file, "%s\n", instruction);
       ++address;
@@ -361,11 +339,9 @@ static int opcode_handler(FILE *output_file,
     opcode = atoi(instruction);
   } else {
     opcode = name_to_opcode(instruction);
-    if (opcode < 0) {
-      char err_msg[100] = "";
-      snprintf(err_msg, 100, "line %d: '%s' is not a valid instruction", line_number, instruction);
-      return dlt_error(err_msg);
-    }
+    if (opcode < 0)
+      return dlt_errorf("line %d: '%s' is not a valid instruction",
+			line_number, instruction);
   }
 
   if (fwrite(&opcode, sizeof(opcode), 1, output_file) == 0) return dlt_error("failed to write binary data to .dopc file");
