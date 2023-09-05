@@ -13,7 +13,7 @@
 :_dictx
 	const
 	@x
-	next
+	return
 
 .codeword fetch fetch
 .codeword dup dup
@@ -28,14 +28,16 @@
 
 
 :test
-	docol
+	call
 	@_dictadd-x
+	call
 	@_dictquadruple
-	@exit
+	exit
 	
 :_start
 const
 7
-jumpn
+const
 @test
+jump
 exit

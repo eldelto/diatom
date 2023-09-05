@@ -74,14 +74,6 @@ inline static word rpeek(void) {
   return stack_peek(return_stack);
 }
 
-inline static void jump(word address) {
-  instruction_pointer = address;
-}
-
-inline static void jumpn(void) {
-  jump(memory[instruction_pointer + 1]);
-}
-
 static int init_memory(char *filename) {
   FILE* input_file = fopen(filename, "r");
   if (input_file == NULL) {
@@ -126,6 +118,9 @@ int main(int argc, char* argv[]) {
     case EXIT: {
       puts("VM exited normally");
       return 0;
+    } 
+    case NOP: {
+      break;
     }
     case CONST: {
       ++instruction_pointer;
@@ -169,32 +164,33 @@ int main(int argc, char* argv[]) {
       pop();
       break;
     }
-     case JUMP: {
-      jump(pop());
-      continue;
-    }
-    case JUMPN: {
-      jumpn();
-      continue;
-    }
-    case NOP: {
+    case SWAP: {
+      const word x = pop();
+      const word y = pop();
+      push(x);
+      push(y);
       break;
     }
-    case DOCOL: {
-      rpush(r0);
-      r0 = instruction_pointer;
-      // Implicit NEXT
-      jump(memory[++r0]);
+    case OVER: {
+      const word x = pop();
+      const word y = pop();
+      const word z = pop();
+      push(x);
+      push(y);
+      push(z);
+      break;
+    }
+    case JUMP: {
+      instruction_pointer = pop();
       continue;
     }
-    case NEXT: {
-      jump(memory[++r0]);
+    case CALL: {
+      rpush(instruction_pointer + 2);
+      instruction_pointer = memory[instruction_pointer + 1];
       continue;
     }
     case RETURN: {
-      r0 = rpop();
-      // Implicit NEXT
-      jump(memory[++r0]);
+      instruction_pointer = rpop();
       continue;
     }
     default: {

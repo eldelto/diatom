@@ -9,6 +9,7 @@
 
 enum instructions {
   EXIT,
+  NOP,
   CONST,
   FETCH,
   STORE,
@@ -18,16 +19,16 @@ enum instructions {
   DIVIDE,
   DUP,
   DROP,
+  SWAP,
+  OVER,
   JUMP,
-  JUMPN,
-  NOP,
-  DOCOL,
-  NEXT,
-  RETURN
+  CALL,
+  RETURN,
 };
 
 char instruction_names[INSTRUCTION_COUNT][INSTRUCTION_NAME_MAX] = {
   "exit",
+  "nop",
   "const",
   "fetch",
   "store",
@@ -37,12 +38,11 @@ char instruction_names[INSTRUCTION_COUNT][INSTRUCTION_NAME_MAX] = {
   "divide",
   "dup",
   "drop",
+  "swap",
+  "over",
   "jump",
-  "jumpn",
-  "nop",
-  "docol",
-  "next",
-  "return"
+  "call",
+  "return",
 };
 
 int name_to_opcode(char* name) {

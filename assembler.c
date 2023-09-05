@@ -149,7 +149,7 @@ static int codeword_macro(char instruction[IDENTIFIER_MAX],
   }
 
   // Return from the codeword by calling next.
-  fputs("next\n", output_file);
+  fputs("return\n", output_file);
 
   return 0;
 }
@@ -170,14 +170,15 @@ static int colonword_macro(char instruction[IDENTIFIER_MAX],
 
    // Emit the remaining instructions.
   fprintf(output_file, ":_dict%s\n", name);
-  fputs("docol\n", output_file);
 
   char *token = NULL;
-  while((token = strsep(&instruction, MACRO_SEPARATOR)) != NULL)
+  while((token = strsep(&instruction, MACRO_SEPARATOR)) != NULL) {
+    fputs("call\n", output_file);
     fprintf(output_file, "@_dict%s\n", token);
-
+  }
+   
   // Return from the colonword by calling return.
-  fputs("@return\n", output_file);
+  fputs("return\n", output_file);
 
   return 0;
 }
@@ -210,7 +211,7 @@ static int var_macro(char instruction[IDENTIFIER_MAX],
 	  ":_dict%s\n"
 	  "const\n"
 	  "@_var%s\n"
-	  "next\n", name, name);
+	  "return\n", name, name);
 
   return 0;
 }
@@ -239,7 +240,7 @@ static int const_macro(char instruction[IDENTIFIER_MAX],
 	  ":_dict%s\n"
 	  "const\n"
 	  "%s\n"
-	  "next\n", name, value);
+	  "return\n", name, value);
 
   return 0;
 }
@@ -311,8 +312,8 @@ static int label_handler(FILE *output_file,
 			 char instruction[IDENTIFIER_MAX],
 			 const unsigned int line_number) {
 
-  // Start at 2 because we have to jump to the _start label.
-  static unsigned int address = 2;
+  // Start at 3 because we have to jump to the _start label.
+  static unsigned int address = 3;
 
   switch (instruction[0]) {
     // Empty line
@@ -358,9 +359,11 @@ static int opcode_handler(FILE *output_file,
     const struct label* const l = find_label("_start");
     if (l == NULL) return dlt_error("no '_start' label found");
 
-    const int opcode = JUMPN;
-    if (fwrite(&opcode, sizeof(opcode), 1, output_file) == 0) return dlt_error("failed to write initial jumpn to .dopc file");
+    int opcode = CONST;
+    if (fwrite(&opcode, sizeof(opcode), 1, output_file) == 0) return dlt_error("failed to write initial const to .dopc file");
     if (fwrite(&l->address, sizeof(l->address), 1, output_file) == 0) return dlt_error("failed to write '_start' address to .dopc file");
+    opcode = JUMP;
+    if (fwrite(&opcode, sizeof(opcode), 1, output_file) == 0) return dlt_error("failed to write initial jump to .dopc file");
   }
 
   if (instruction[0] == '#') return 0;
