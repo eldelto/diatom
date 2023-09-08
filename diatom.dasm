@@ -1,29 +1,44 @@
-:exit
-	exit
-:return
-	return
-
-#:var
-#	nop
-#	const
-#	@var
-
-:x
-	2
-:_dictx
-	const
-	@x
-	return
-
-.codeword fetch fetch
+# Machine words
+.codeword exit exit
+.codeword nop nop
+.codeword const const
+.codeword @ fetch
+.codeword ! store
+.codeword + add
+.codeword - subtract
+.codeword * multiply
+.codeword / divide
 .codeword dup dup
-.codeword add add
+.codeword drop drop
+.codeword swap swap
+.codeword over over
+.codeword jump jump
+.codeword call call
+.codeword ; return
 
+# Built-in variables
+.var state 0
+.var latest 0
+.var here 0
+.var base 10
+
+# Built-in constants
+# VERSION         Is the current version of this FORTH.
+# R0              The address of the top of the return stack.
+# DOCOL           Pointer to DOCOL.
+# F_IMMED         The IMMEDIATE flag's actual value.
+# F_HIDDEN        The HIDDEN flag's actual value.
+# F_LENMASK       The length mask in the flags/len byte.
+
+# Assembly words
+# .colonword key ???
+
+# Test stuff
 .var beast 666
 .const one 1
 
-.colonword add-x beast fetch add one add
-.colonword double dup add
+.colonword add-x beast @ + one +
+.colonword double dup +
 .colonword quadruple double double
 
 
@@ -32,6 +47,9 @@
 	@_dictadd-x
 	call
 	@_dictquadruple
+	const
+	65
+	emit
 	exit
 	
 :_start

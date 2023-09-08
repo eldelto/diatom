@@ -6,6 +6,7 @@
 
 #define STACK_SIZE  10
 #define MEMORY_SIZE 1000
+#define IO_BUFFER_SIZE 4096
 
 /* Stacks */
 struct stack {
@@ -29,6 +30,28 @@ inline static word stack_peek(struct stack* s) {
   return s->data[index];
 }
 
+/* I/O functions */
+struct input {
+  char buffer[IO_BUFFER_SIZE];
+  size_t len;
+  size_t cursor;
+};
+
+char next_char(struct input *i) {
+  if (i->cursor >= i->len) {
+    size_t len = fread(i->buffer, sizeof(i->buffer[0]), IO_BUFFER_SIZE, stdin);
+    if (len == 0) {
+      if (feof(stdin)) return '\0';
+      dlt_fatal_error("failed to read from stdin");
+    }
+
+    i->len = len;
+    i->cursor = 0;
+  }
+
+  return i->buffer[i->cursor++];
+}
+
 /* VM State */
 
 // Registers
@@ -48,6 +71,11 @@ struct stack* return_stack = &(struct stack) {
 
 // Memory
 word memory[MEMORY_SIZE] = { EXIT };
+struct input input_buffer = (struct input) {
+  .buffer = { '\0' },
+  .len = 0,
+  .cursor = 0,
+};
 
 // Helper functions
 inline static void push(word value) {
@@ -193,6 +221,20 @@ int main(int argc, char* argv[]) {
       instruction_pointer = rpop();
       continue;
     }
+    case KEY: {
+      char c = next_char(&input_buffer);
+      push(c);
+      break;
+    }
+    case EMIT: {
+      putchar((char)pop());
+      break;
+    }
+//    case NATIVE: {
+//      const pointer_t function = native_functions[index];
+//      function();
+//      break;
+//    }
     default: {
       printf("Unknown instruction at memory location %d - aborting.", instruction_pointer);
       return -1;
