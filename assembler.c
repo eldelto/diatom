@@ -126,15 +126,15 @@ static int dictionary_header(char *word_name, FILE *output_file) {
 }
 
 static int codeword_macro(char instruction[IDENTIFIER_MAX],
-		     FILE *output_file,
-		     unsigned int line_number) {
+			  FILE *output_file,
+			  unsigned int line_number) {
   // Discard the '.codeword' part.
   strsep(&instruction, MACRO_SEPARATOR);
 
   char *name = strsep(&instruction, MACRO_SEPARATOR);
   if (name == NULL)
     return dlt_errorf("line %d: .codeword macro requires name parameter. \n"
-	     "Usage: .codeword [name] [instructions...]", line_number);
+		      "Usage: .codeword [name] [instructions...]", line_number);
 
   int err = dictionary_header(name, output_file);
   if (err) return err;
@@ -155,20 +155,20 @@ static int codeword_macro(char instruction[IDENTIFIER_MAX],
 }
 
 static int colonword_macro(char instruction[IDENTIFIER_MAX],
-		     FILE *output_file,
-		     unsigned int line_number) {
+			   FILE *output_file,
+			   unsigned int line_number) {
   // Discard the '.colonword' part.
   strsep(&instruction, MACRO_SEPARATOR);
 
   char *name = strsep(&instruction, MACRO_SEPARATOR);
   if (name == NULL)
     return dlt_errorf("line %d: .colonword macro requires name parameter. \n"
-	     "Usage: .colonword [name] [words...]", line_number);
+		      "Usage: .colonword [name] [words...]", line_number);
 
   int err = dictionary_header(name, output_file);
   if (err) return err;
 
-   // Emit the remaining instructions.
+  // Emit the remaining instructions.
   fprintf(output_file, ":_dict%s\n", name);
 
   char *token = NULL;
@@ -176,7 +176,7 @@ static int colonword_macro(char instruction[IDENTIFIER_MAX],
     fputs("call\n", output_file);
     fprintf(output_file, "@_dict%s\n", token);
   }
-   
+
   // Return from the colonword by calling return.
   fputs("return\n", output_file);
 
@@ -192,12 +192,12 @@ static int var_macro(char instruction[IDENTIFIER_MAX],
   char *name = strsep(&instruction, MACRO_SEPARATOR);
   if (name == NULL)
     return dlt_errorf("line %d: .var macro requires name parameter. \n"
-	     "Usage: .var [name] [value]", line_number);
+		      "Usage: .var [name] [value]", line_number);
 
   char *value = strsep(&instruction, MACRO_SEPARATOR);
   if (value == NULL)
     return dlt_errorf("line %d: .var macro requires value parameter. \n"
-	     "Usage: .var [name] [value]", line_number);
+		      "Usage: .var [name] [value]", line_number);
 
   // Emit the value.
   fprintf(output_file, ":_var%s\n"
@@ -217,20 +217,20 @@ static int var_macro(char instruction[IDENTIFIER_MAX],
 }
 
 static int const_macro(char instruction[IDENTIFIER_MAX],
-		     FILE *output_file,
-		     unsigned int line_number) {
+		       FILE *output_file,
+		       unsigned int line_number) {
   // Discard the '.const' part.
   strsep(&instruction, MACRO_SEPARATOR);
 
   char *name = strsep(&instruction, MACRO_SEPARATOR);
   if (name == NULL)
     return dlt_errorf("line %d: .const macro requires name parameter. \n"
-	     "Usage: .const [name] [value]", line_number);
+		      "Usage: .const [name] [value]", line_number);
 
   char *value = strsep(&instruction, MACRO_SEPARATOR);
   if (value == NULL)
     return dlt_errorf("line %d: .const macro requires value parameter. \n"
-	     "Usage: .const [name] [value]", line_number);
+		      "Usage: .const [name] [value]", line_number);
 
   int err = dictionary_header(name, output_file);
   if (err) return err;
@@ -308,12 +308,15 @@ static int macro_handler(FILE *output_file,
   return 0;
 }
 
-static int label_handler(FILE *output_file,
-			 char instruction[IDENTIFIER_MAX],
-			 const unsigned int line_number) {
+static int append_label_handler(FILE *output_file,
+				char instruction[IDENTIFIER_MAX],
+				const unsigned int line_number) {
 
-  // Start at 3 because we have to jump to the _start label.
-  static unsigned int address = 3;
+  // Suppress unused parameter errors.
+  (void)output_file;
+  (void)line_number;
+
+  static unsigned int address = 0;
 
   switch (instruction[0]) {
     // Empty line
@@ -323,6 +326,27 @@ static int label_handler(FILE *output_file,
     // Label creation
   case ':': {
     append_label(instruction + 1, address);
+    break;
+  }
+  default: ++address;
+  }
+
+  return 0;
+}
+
+static int resolve_label_handler(FILE *output_file,
+				 char instruction[IDENTIFIER_MAX],
+				 const unsigned int line_number) {
+
+  static unsigned int address = 0;
+
+  switch (instruction[0]) {
+    // Empty line
+  case '\0': break;
+    // Comment
+  case '#': break;
+    // Label creation
+  case ':': {
     fprintf(output_file, "# %s @ %d\n", instruction, address);
     break;
   }
@@ -355,17 +379,6 @@ static int opcode_handler(FILE *output_file,
 			  char instruction[IDENTIFIER_MAX],
 			  const unsigned int line_number) {
 
-  if (line_number == 1) {
-    const struct label* const l = find_label("_start");
-    if (l == NULL) return dlt_error("no '_start' label found");
-
-    int opcode = CONST;
-    if (fwrite(&opcode, sizeof(opcode), 1, output_file) == 0) return dlt_error("failed to write initial const to .dopc file");
-    if (fwrite(&l->address, sizeof(l->address), 1, output_file) == 0) return dlt_error("failed to write '_start' address to .dopc file");
-    opcode = JUMP;
-    if (fwrite(&opcode, sizeof(opcode), 1, output_file) == 0) return dlt_error("failed to write initial jump to .dopc file");
-  }
-
   if (instruction[0] == '#') return 0;
 
   // Constant or VM instruction
@@ -379,12 +392,16 @@ static int opcode_handler(FILE *output_file,
 			line_number, instruction);
   }
 
-  if (fwrite(&opcode, sizeof(opcode), 1, output_file) == 0) return dlt_error("failed to write binary data to .dopc file");
+  if (fwrite(&opcode, sizeof(opcode), 1, output_file) == 0)
+    return dlt_error("failed to write binary data to .dopc file");
 
   return 0;
 }
 
-static int create_output_file(char *input_filename, char output_filename[IDENTIFIER_MAX], line_handler handler, char *write_mode) {
+static int create_output_file(char *input_filename,
+			      char output_filename[IDENTIFIER_MAX],
+			      line_handler handler,
+			      char *write_mode) {
   int err = 0;
 
   FILE* input_file = fopen(input_filename, "r");
@@ -444,7 +461,8 @@ int main(int argc, char* argv[]) {
   if (replace_extension(dasm_filename, dopc_filename, ".dopc")) dlt_panic();
 
   if (create_output_file(dasm_filename, dexp_filename, macro_handler, "w")) dlt_panic();
-  if (create_output_file(dexp_filename, dins_filename, label_handler, "w")) dlt_panic();
+  if (create_output_file(dexp_filename, dins_filename, append_label_handler, "w")) dlt_panic();
+  if (create_output_file(dexp_filename, dins_filename, resolve_label_handler, "w")) dlt_panic();
   if (create_output_file(dins_filename, dopc_filename, opcode_handler, "wb")) dlt_panic();
 
   return EXIT_SUCCESS;

@@ -1,3 +1,7 @@
+const
+@start
+jump
+
 # Machine words
 .codeword exit exit
 .codeword nop nop
@@ -52,7 +56,7 @@
 	emit
 	exit
 	
-:_start
+:start
 const
 7
 const
