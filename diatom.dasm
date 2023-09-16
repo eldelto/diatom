@@ -54,6 +54,8 @@ jump
 	const
 	65
 	emit
+	key
+	emit
 	exit
 	
 :start

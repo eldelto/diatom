@@ -39,7 +39,7 @@ struct input {
 
 char next_char(struct input *i) {
   if (i->cursor >= i->len) {
-    size_t len = fread(i->buffer, sizeof(i->buffer[0]), IO_BUFFER_SIZE, stdin);
+    size_t len = fread(i->buffer, sizeof(i->buffer[0]), 1, stdin);
     if (len == 0) {
       if (feof(stdin)) return '\0';
       dlt_fatal_error("failed to read from stdin");
