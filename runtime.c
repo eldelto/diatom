@@ -230,13 +230,32 @@ int main(int argc, char* argv[]) {
       putchar((char)pop());
       break;
     }
+    case EQUALS: {
+      if (pop() == pop()) push(-1);
+      else push(0);
+      break;
+    }
+    case JUMPIF: {
+      if ((int)pop() == -1) {
+	puts("jump!");
+	instruction_pointer = pop();
+	continue;
+      }
+      pop();
+      break;
+    }
+    case NOT: {
+      push(~pop());
+      break;
+    }
 //    case NATIVE: {
 //      const pointer_t function = native_functions[index];
 //      function();
 //      break;
 //    }
     default: {
-      printf("Unknown instruction at memory location %d - aborting.", instruction_pointer);
+      printf("Unknown instruction '%d' at memory location %d - aborting.",
+	     instruction, instruction_pointer);
       return -1;
     }
     }

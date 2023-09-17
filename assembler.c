@@ -11,7 +11,7 @@
 #include "diatom.h"
 #include "util.h"
 
-#define IDENTIFIER_MAX 100
+#define IDENTIFIER_MAX 255
 #define EXTENSION_MAX 6
 #define LABELS_MAX 100
 #define MACRO_SEPARATOR " "
@@ -144,8 +144,17 @@ static int codeword_macro(char instruction[IDENTIFIER_MAX],
 
   char *token = NULL;
   while((token = strsep(&instruction, MACRO_SEPARATOR)) != NULL) {
-    fputs(token, output_file);
-    fputs("\n", output_file);
+    const char first_char = token[0];
+
+    if (first_char == ':') {
+      fprintf(output_file, "%s\n", token);
+    } else if (first_char == '@') {
+      fputs("const\n", output_file);
+      fprintf(output_file, "%s\n", token);
+    } else {
+      fputs(token, output_file);
+      fputs("\n", output_file);
+    }
   }
 
   // Return from the codeword by calling next.
@@ -173,8 +182,22 @@ static int colonword_macro(char instruction[IDENTIFIER_MAX],
 
   char *token = NULL;
   while((token = strsep(&instruction, MACRO_SEPARATOR)) != NULL) {
-    fputs("call\n", output_file);
-    fprintf(output_file, "@_dict%s\n", token);
+    const char first_char = token[0];
+    const size_t token_len = strnlen(token, 2);
+
+    if (isdigit(first_char) || first_char == '-') {
+      int number = atoi(token);
+      fputs("const\n", output_file);
+      fprintf(output_file, "%d\n", number);
+    } else if (token_len == 2 && first_char == ':') {
+      fprintf(output_file, "%s\n", token);
+    } else if (token_len == 2 && first_char == '@') {
+      fputs("const\n", output_file);
+      fprintf(output_file, "%s\n", token);
+    } else {
+      fputs("call\n", output_file);
+      fprintf(output_file, "@_dict%s\n", token);
+    }
   }
 
   // Return from the colonword by calling return.
@@ -262,7 +285,8 @@ static int translate_file(FILE *input_file, FILE *output_file, line_handler hand
 
     trim_string(line);
     if (line_len > IDENTIFIER_MAX) {
-      err = dlt_errorf("line %d: Identifier exceeds max length", line_number);
+      err = dlt_errorf("line %d: Identifier '%s' exceeds max length",
+		       line_number, line);
       break;
     }
     strlcpy(instruction, line, sizeof(instruction));

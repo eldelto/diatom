@@ -8,9 +8,10 @@
 
 
 /* Error handling */
-static char error_msg[100] = "";
+#define ERR_MSG_MAX 255
+static char error_msg[ERR_MSG_MAX] = "";
 
-int dlt_error(char msg[100]) {
+int dlt_error(char msg[ERR_MSG_MAX]) {
     strlcpy(error_msg, msg, sizeof(error_msg));
     return -1;
 }

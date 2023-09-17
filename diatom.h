@@ -3,7 +3,7 @@
 
 #include "util.h"
 
-#define INSTRUCTION_COUNT 18
+#define INSTRUCTION_COUNT 21
 #define INSTRUCTION_NAME_MAX 10
 #define WORD_NAME_MAX 10
 
@@ -26,6 +26,9 @@ enum instructions {
   RETURN,
   KEY,
   EMIT,
+  EQUALS,
+  JUMPIF,
+  NOT,
 };
 
 char instruction_names[INSTRUCTION_COUNT][INSTRUCTION_NAME_MAX] = {
@@ -47,6 +50,9 @@ char instruction_names[INSTRUCTION_COUNT][INSTRUCTION_NAME_MAX] = {
   "return",
   "key",
   "emit",
+  "equals",
+  "jumpif",
+  "not",
 };
 
 int name_to_opcode(char* name) {

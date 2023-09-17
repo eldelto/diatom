@@ -5,7 +5,6 @@ jump
 # Machine words
 .codeword exit exit
 .codeword nop nop
-.codeword const const
 .codeword @ fetch
 .codeword ! store
 .codeword + add
@@ -19,6 +18,34 @@ jump
 .codeword jump jump
 .codeword call call
 .codeword ; return
+.codeword key key
+.codeword emit emit
+.codeword = equals
+.codeword jumpif jumpif
+.codeword not not
+
+# Reserve 11 bytes for the buffer of our 'word' word.
+.var word-buffer 0
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+.var word-cursor 1
+
+.colonword word-cursor+1 word-cursor @ 1 + word-cursor !
+.colonword reset-word-cursor 1 word-cursor !
+.colonword store-in-word word-buffer ! word-cursor+1
+.colonword finish-word word-cursor @ word-buffer ! reset-word-cursor
+.codeword is-blank? const 32 equals
+.codeword non-blank-key key dup const 32 equals not @nbk1 swap jumpif drop @_dictnon-blank-key jump :nbk1
+# TODO: Re-write as colonword.
+.colonword word non-blank-key :word1 store-in-word key dup is-blank? not jumpif @word1 store-in-word finish-word word-buffer
 
 # Built-in variables
 .var state 0
@@ -35,7 +62,8 @@ jump
 # F_LENMASK       The length mask in the flags/len byte.
 
 # Assembly words
-# .colonword key ???
+
+# .colonword word ???
 
 # Test stuff
 .var beast 666
@@ -44,6 +72,7 @@ jump
 .colonword add-x beast @ + one +
 .colonword double dup +
 .colonword quadruple double double
+.colonword main non-blank-key emit
 
 
 :test
@@ -54,14 +83,12 @@ jump
 	const
 	65
 	emit
-	key
+	call
+	@_dictnon-blank-key
 	emit
 	exit
 	
 :start
-const
-7
-const
-@test
-jump
+call
+@_dictmain
 exit
