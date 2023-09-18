@@ -11,7 +11,7 @@
 #include "diatom.h"
 #include "util.h"
 
-#define IDENTIFIER_MAX 255
+#define IDENTIFIER_MAX 1024
 #define EXTENSION_MAX 6
 #define LABELS_MAX 100
 #define MACRO_SEPARATOR " "

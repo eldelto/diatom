@@ -36,16 +36,16 @@ nop
 nop
 nop
 nop
-.var word-cursor 1
+.var word-cursor 0
 
-.colonword word-cursor+1 word-cursor @ 1 + word-cursor !
-.colonword reset-word-cursor 1 word-cursor !
-.colonword store-in-word word-buffer ! word-cursor+1
+.colonword word-cursor+1 word-cursor dup @ 1 + word-cursor !
+.colonword reset-word-cursor 0 word-cursor !
+.colonword store-in-word word-buffer word-cursor+1 + !
 .colonword finish-word word-cursor @ word-buffer ! reset-word-cursor
 .codeword is-blank? const 32 equals
 .codeword non-blank-key key dup const 32 equals not @nbk1 swap jumpif drop @_dictnon-blank-key jump :nbk1
 # TODO: Re-write as colonword.
-.colonword word non-blank-key :word1 store-in-word key dup is-blank? not jumpif @word1 store-in-word finish-word word-buffer
+.colonword word non-blank-key :word1 store-in-word key dup is-blank? not @word1 swap jumpif store-in-word finish-word word-buffer
 
 # Built-in variables
 .var state 0
@@ -72,7 +72,7 @@ nop
 .colonword add-x beast @ + one +
 .colonword double dup +
 .colonword quadruple double double
-.colonword main non-blank-key emit
+.colonword main word 1 + @ emit
 
 
 :test
