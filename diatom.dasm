@@ -15,14 +15,16 @@ jump
 .codeword drop drop
 .codeword swap swap
 .codeword over over
-.codeword jump jump
+.codeword jump rpop drop jump
 .codeword call call
 .codeword ; return
 .codeword key key
 .codeword emit emit
 .codeword = equals
-.codeword jumpif jumpif
+.codeword jumpif rpop drop jumpif
 .codeword not not
+.codeword < lt
+.codeword > gt
 
 # Reserve 11 bytes for the buffer of our 'word' word.
 .var word-buffer 0
@@ -38,14 +40,18 @@ nop
 nop
 .var word-cursor 0
 
-.colonword word-cursor+1 word-cursor dup @ 1 + word-cursor !
+.colonword word-cursor+1 word-cursor @ 1 + word-cursor !
 .colonword reset-word-cursor 0 word-cursor !
-.colonword store-in-word word-buffer word-cursor+1 + !
+.colonword store-in-word word-buffer word-cursor+1 word-cursor @ + !
 .colonword finish-word word-cursor @ word-buffer ! reset-word-cursor
 .codeword is-blank? const 32 equals
-.codeword non-blank-key key dup const 32 equals not @nbk1 swap jumpif drop @_dictnon-blank-key jump :nbk1
-# TODO: Re-write as colonword.
-.colonword word non-blank-key :word1 store-in-word key dup is-blank? not @word1 swap jumpif store-in-word finish-word word-buffer
+.codeword non-blank-key key dup const 32 equals not @nbk1 jumpif drop @_dictnon-blank-key jump :nbk1
+.colonword word non-blank-key :word1 store-in-word key dup is-blank? not @word1 jumpif finish-word word-buffer
+
+.var emit-word-cursor 0
+.colonword reset-emit-word-cursor 0 emit-word-cursor !
+.colonword emit-word-cursor+1 emit-word-cursor @ 1 + emit-word-cursor ! emit-word-cursor @
+.colonword emit-word reset-emit-word-cursor :emit-word1 word-buffer @ emit-word-cursor+1 < @emit-word2 jumpif word-buffer emit-word-cursor @ + @ emit @emit-word1 jump :emit-word2
 
 # Built-in variables
 .var state 0
@@ -72,7 +78,7 @@ nop
 .colonword add-x beast @ + one +
 .colonword double dup +
 .colonword quadruple double double
-.colonword main word 1 + @ emit
+.colonword main word emit-word exit
 
 
 :test

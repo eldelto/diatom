@@ -13,7 +13,7 @@
 
 #define IDENTIFIER_MAX 1024
 #define EXTENSION_MAX 6
-#define LABELS_MAX 100
+#define LABELS_MAX 200
 #define MACRO_SEPARATOR " "
 
 struct label {

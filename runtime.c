@@ -227,7 +227,8 @@ int main(int argc, char* argv[]) {
       break;
     }
     case EMIT: {
-      putchar((char)pop());
+      //putchar((char)pop());
+      printf("'%c'\n", (char)pop());
       break;
     }
     case EQUALS: {
@@ -236,16 +237,30 @@ int main(int argc, char* argv[]) {
       break;
     }
     case JUMPIF: {
+      const word address = pop();
       if ((int)pop() == -1) {
 	puts("jump!");
-	instruction_pointer = pop();
+	instruction_pointer = address;
 	continue;
       }
-      pop();
       break;
     }
     case NOT: {
       push(~pop());
+      break;
+    }
+    case LT: {
+      if ((int)pop() > (int)pop()) push(-1);
+      else push(0);
+      break;
+    }
+    case GT: {
+      if ((int)pop() < (int)pop()) push(-1);
+      else push(0);
+      break;
+    }
+    case RPOP: {
+      push(rpop());
       break;
     }
 //    case NATIVE: {
