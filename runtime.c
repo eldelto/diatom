@@ -98,9 +98,9 @@ inline static word rpop(void) {
   return stack_pop(return_stack);
 }
 
-inline static word rpeek(void) {
-  return stack_peek(return_stack);
-}
+//inline static word rpeek(void) {
+//  return stack_peek(return_stack);
+//}
 
 static int init_memory(char *filename) {
   FILE* input_file = fopen(filename, "r");
@@ -139,12 +139,16 @@ int main(int argc, char* argv[]) {
   while (instruction_pointer < MEMORY_SIZE) {
     const word instruction = memory[instruction_pointer];
 
-    printf("ds -> %d | rs -> %d | ip = %d | r0 = %d | instr = %s\n",
-	   peek(), rpeek(), instruction_pointer, r0, instruction_names[instruction]);
+//    printf("ds -> ");
+//    for (int i = data_stack->pointer -1; i >= 0; --i)
+//      printf("%d ", data_stack->data[i]);
+//    
+//    printf("| rs -> %d | ip = %d | r0 = %d | instr = %s\n",
+//	   rpeek(), instruction_pointer, r0, instruction_names[instruction]);
 
     switch (instruction) {
     case EXIT: {
-      puts("VM exited normally");
+      puts("\nVM exited normally");
       return 0;
     } 
     case NOP: {
@@ -227,8 +231,8 @@ int main(int argc, char* argv[]) {
       break;
     }
     case EMIT: {
-      //putchar((char)pop());
-      printf("'%c'\n", (char)pop());
+      putchar((char)pop());
+      //printf("'%c'\n", (char)pop());
       break;
     }
     case EQUALS: {
@@ -239,7 +243,6 @@ int main(int argc, char* argv[]) {
     case JUMPIF: {
       const word address = pop();
       if ((int)pop() == -1) {
-	puts("jump!");
 	instruction_pointer = address;
 	continue;
       }
@@ -250,12 +253,12 @@ int main(int argc, char* argv[]) {
       break;
     }
     case LT: {
-      if ((int)pop() > (int)pop()) push(-1);
+      if ((int)pop() >= (int)pop()) push(-1);
       else push(0);
       break;
     }
     case GT: {
-      if ((int)pop() < (int)pop()) push(-1);
+      if ((int)pop() <= (int)pop()) push(-1);
       else push(0);
       break;
     }

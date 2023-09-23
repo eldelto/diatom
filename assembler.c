@@ -194,6 +194,9 @@ static int colonword_macro(char instruction[IDENTIFIER_MAX],
     } else if (token_len == 2 && first_char == '@') {
       fputs("const\n", output_file);
       fprintf(output_file, "%s\n", token);
+    } else if (dlt_string_equals(token, "jump")
+	       || dlt_string_equals(token, "jumpif")) {
+      fprintf(output_file, "%s\n", token);
     } else {
       fputs("call\n", output_file);
       fprintf(output_file, "@_dict%s\n", token);
