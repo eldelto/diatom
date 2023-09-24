@@ -51,6 +51,10 @@ nop
 .colonword emit-word-cursor+1 emit-word-cursor @ 1 + emit-word-cursor ! emit-word-cursor @
 .colonword emit-word reset-emit-word-cursor :emit-word1 word-buffer @ emit-word-cursor+1 > not @emit-word2 jumpif word-buffer emit-word-cursor @ + @ emit @emit-word1 jump :emit-word2
 
+# TODO: Implement 'number'
+#.colonword number ???
+
+
 # Built-in variables
 .var state 0
 .var latest 0

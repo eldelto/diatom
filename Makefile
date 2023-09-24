@@ -15,7 +15,7 @@ CFLAGS  := -Wall -Werror -Wextra -pedantic-errors \
         -std=c17 -MMD -MP
 
 .PHONY: all
-all: bin bin/runtime bin/assembler
+all: bin bin/runtime bin/assembler bin/assembler-v2
 
 bin:
 	mkdir bin
@@ -24,6 +24,9 @@ bin/runtime: runtime.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 bin/assembler: assembler.o
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+
+bin/assembler-v2: assembler_v2.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 .PHONY: clean
