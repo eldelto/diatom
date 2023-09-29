@@ -174,15 +174,30 @@ static int parse_comment(struct tokenizer *t, FILE *out) {
   return err;
 }
 
+static int parse_call(struct tokenizer *t, FILE *out) {
+  char *token = t->token;
+  if (!dlt_string_starts_with(token, "!") || strnlen(token, 2) < 2)
+    return dlt_errorf("line %d: expected '!<word>' but got '%s'",
+		      t->line_number, t->token);
+
+  token++;
+  
+  if (fprintf(out, "call %s\n", token) < 0)
+    return dlt_error("failed to write to file");
+  
+  consume_token(t);
+  return 0;
+}
+
 static int macro_handler(struct tokenizer *t, FILE *out) {
   char *token = t->token;
 
   if (dlt_string_equals(token, "(")) {
     return parse_comment(t, out);
+  } else if (dlt_string_starts_with(token, "!") && strnlen(token, 2) > 1) {
+    return parse_call(t, out);
   }
-  //else if (dlt_string_starts_with("!")) {
-  //  return call_handler(t, out);
-  //} else if(dlt_string_equals(token, ".codeword")) {
+  //else if(dlt_string_equals(token, ".codeword")) {
   //  return codeword_handler(t, out);
   //} else if (dlt_string_equals(token, ".var")) {
   //  return var_handler(t, out);
