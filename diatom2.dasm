@@ -1,0 +1,105 @@
+const
+@start
+jump
+
+# Machine words
+.codeword exit exit .end
+.codeword nop nop .end
+.codeword @ fetch .end
+.codeword ! store .end
+.codeword + add .end
+.codeword - subtract .end
+.codeword * multiply .end
+.codeword / divide .end
+.codeword dup dup .end
+.codeword drop drop .end
+.codeword swap swap .end
+.codeword over over .end
+.codeword call call .end
+.codeword ; return .end
+.codeword key key .end
+.codeword emit emit .end
+.codeword = equals .end
+.codeword not not .end
+.codeword < lt .end
+.codeword > gt .end
+
+# Reserve 11 bytes for the buffer of our 'word' word.
+.var word-buffer 0 .end
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+nop
+.var word-cursor 0 .end
+
+.colonword word-cursor+1 word-cursor @ 1 + dup word-cursor ! .end
+.colonword reset-word-cursor 0 word-cursor ! .end
+.colonword store-in-word word-buffer word-cursor+1 + ! .end
+.colonword finish-word word-cursor @ word-buffer ! reset-word-cursor .end
+.codeword is-blank? const 32 equals .end
+.codeword non-blank-key
+  key dup const 32 equals not @nbk1 jumpif
+  drop @_dictnon-blank-key jump :nbk1
+.end
+.colonword word
+  non-blank-key
+  :word1 store-in-word
+  key dup is-blank? not @word1 jumpif
+  drop finish-word word-buffer
+.end
+
+.var emit-word-cursor 0 .end
+.colonword reset-emit-word-cursor 0 emit-word-cursor ! .end
+.colonword emit-word-cursor+1
+  emit-word-cursor @ 1 +
+  emit-word-cursor !
+  emit-word-cursor @
+.end
+.colonword emit-word
+  reset-emit-word-cursor
+  :emit-word1 word-buffer @ emit-word-cursor+1 > not @emit-word2 jumpif
+  word-buffer emit-word-cursor @ + @ emit
+  @emit-word1 jump
+  :emit-word2
+.end
+
+# TODO: Implement 'number'
+#.colonword number ???
+
+# Built-in variables
+.var state 0 .end
+.var latest 0 .end
+.var here 0 .end
+.var base 10 .end
+
+# Built-in constants
+# VERSION         Is the current version of this FORTH.
+# R0              The address of the top of the return stack.
+# DOCOL           Pointer to DOCOL.
+# F_IMMED         The IMMEDIATE flag's actual value.
+# F_HIDDEN        The HIDDEN flag's actual value.
+# F_LENMASK       The length mask in the flags/len byte.
+
+:test
+	call
+	@_dictadd-x
+	call
+	@_dictquadruple
+	const
+	65
+	emit
+	call
+	@_dictnon-blank-key
+	emit
+	exit
+	
+:start
+call
+@_dictmain
+exit
