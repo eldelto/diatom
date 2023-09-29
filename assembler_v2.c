@@ -104,49 +104,98 @@ static void consume_token(struct tokenizer *t) {
   t->token[0] = '\0';
 }
 
-//typedef int (*handler)(struct tokenizer *t, FILE *output_file);
-//
-//static int translate_file(FILE *in, FILE *out, handler h) {
-//  struct tokenizer t = new_tokenizer(in);
-//
-//  int err = 0;
-//  while ((err = next_token(&t)) > 0) {
-//    err = h(&t, out);
-//    if (err) return err;
-//  }
-//
-//  return err;
-//}
+typedef int (*handler)(struct tokenizer *t, FILE *out);
 
-//static int create_output_file(char *input_filename,
-//			      char *output_filename,
-//			      handler handler,
-//			      char *write_mode) {
-//  int err = 0;
-//
-//  FILE* in = fopen(input_filename, "r");
-//  if (in == NULL) {
-//    return dlt_error("failed to open input file");
-//  }
-//
-//  FILE* out = fopen(output_filename, write_mode);
-//  if (out == NULL) {
-//    err = dlt_error("failed to open input file");
-//    goto close_input_file;
-//  }
-//
-//  err = translate_file(in, out, handler);
-//  if (err) {
-//    goto close_files;
-//  }
-//
-// close_files:
-//  fclose(out);
-// close_input_file:
-//  fclose(in);
-//
-//  return err;
-//}
+static int translate_file(FILE *in, FILE *out, handler h) {
+  struct tokenizer t = new_tokenizer(in);
+
+  int err = 0;
+  while ((err = next_token(&t)) > 0) {
+    err = h(&t, out);
+    if (err) return err;
+  }
+
+  return err;
+}
+
+static int create_output_file(char *input_filename,
+			      char *output_filename,
+			      handler handler,
+			      char *write_mode) {
+  int err = 0;
+
+  FILE* in = fopen(input_filename, "r");
+  if (in == NULL) {
+    return dlt_error("failed to open input file");
+  }
+
+  FILE* out = fopen(output_filename, write_mode);
+  if (out == NULL) {
+    err = dlt_error("failed to open input file");
+    goto close_input_file;
+  }
+
+  err = translate_file(in, out, handler);
+  if (err) {
+    goto close_files;
+  }
+
+ close_files:
+  fclose(out);
+ close_input_file:
+  fclose(in);
+
+  return err;
+}
+
+static int expect_token(struct tokenizer *t, char *token) {
+ if (!dlt_string_equals(t->token, token))
+    return dlt_errorf("line %d: expected '%s' but got '%s'",
+		      t->line_number, token, t->token);
+
+ return 0;
+}
+
+static int parse_comment(struct tokenizer *t, FILE *out) {
+  (void)out;
+  
+  int err = 0;
+  if ((err = expect_token(t, "("))) return err;
+  
+  consume_token(t);
+  while ((err = next_token(t)) > 0) {
+    if (dlt_string_equals(t->token, ")")) {
+      consume_token(t);
+      return 0;
+    }
+    consume_token(t);
+  }
+  
+  return err;
+}
+
+static int macro_handler(struct tokenizer *t, FILE *out) {
+  char *token = t->token;
+
+  if (dlt_string_equals(token, "(")) {
+    return parse_comment(t, out);
+  }
+  //else if (dlt_string_starts_with("!")) {
+  //  return call_handler(t, out);
+  //} else if(dlt_string_equals(token, ".codeword")) {
+  //  return codeword_handler(t, out);
+  //} else if (dlt_string_equals(token, ".var")) {
+  //  return var_handler(t, out);
+  //} else if (dlt_string_equals(token, ".const")) {
+  //  return const_handler(t, out);
+
+  // Pipe the token to the output file if nothing matches.
+  if (fputs(token, out) == EOF) return dlt_error("failed to write to file");
+  if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
+  consume_token(t);
+  
+  return 0;
+}
 
 static void usage(void) {
   puts("Usage: dasm [dasm-file]\n");
@@ -173,20 +222,8 @@ int main(int argc, char* argv[]) {
   }
 
   char *dasm_filename = argv[1];
-  FILE* input_file = fopen(dasm_filename, "r");
-  if (input_file == NULL)
-    dlt_fatal_error("failed to open input file");
-  
-  struct tokenizer t = new_tokenizer(input_file);
-  
-  while (next_token(&t) > 0) {
-    printf("line %d: '%s'\n", t.line_number, t.token);
-    consume_token(&t);
-  }
-
-  dlt_panic_on_error();
-
-  fclose(input_file);
+  if (create_output_file(dasm_filename, "dasm2.dexp", macro_handler, "w"))
+    dlt_panic();
 
   return EXIT_SUCCESS;
 }
