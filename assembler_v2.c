@@ -18,6 +18,15 @@ struct tokenizer {
   unsigned int line_number;
 };
 
+static struct tokenizer new_tokenizer(FILE *f) {
+  return (struct tokenizer) {
+    .file = f,
+    .token = {'\0'},
+    .line_buffer = {'\0'},
+    .line_number = 0,
+  };
+}
+
 // next_line reads the next line from the input file. It returns the
 // length of the read line, 0 if EOF has been reached or -1 if an
 // error occured.
@@ -95,6 +104,50 @@ static void consume_token(struct tokenizer *t) {
   t->token[0] = '\0';
 }
 
+//typedef int (*handler)(struct tokenizer *t, FILE *output_file);
+//
+//static int translate_file(FILE *in, FILE *out, handler h) {
+//  struct tokenizer t = new_tokenizer(in);
+//
+//  int err = 0;
+//  while ((err = next_token(&t)) > 0) {
+//    err = h(&t, out);
+//    if (err) return err;
+//  }
+//
+//  return err;
+//}
+
+//static int create_output_file(char *input_filename,
+//			      char *output_filename,
+//			      handler handler,
+//			      char *write_mode) {
+//  int err = 0;
+//
+//  FILE* in = fopen(input_filename, "r");
+//  if (in == NULL) {
+//    return dlt_error("failed to open input file");
+//  }
+//
+//  FILE* out = fopen(output_filename, write_mode);
+//  if (out == NULL) {
+//    err = dlt_error("failed to open input file");
+//    goto close_input_file;
+//  }
+//
+//  err = translate_file(in, out, handler);
+//  if (err) {
+//    goto close_files;
+//  }
+//
+// close_files:
+//  fclose(out);
+// close_input_file:
+//  fclose(in);
+//
+//  return err;
+//}
+
 static void usage(void) {
   puts("Usage: dasm [dasm-file]\n");
   puts("Flags:");
@@ -124,13 +177,8 @@ int main(int argc, char* argv[]) {
   if (input_file == NULL)
     dlt_fatal_error("failed to open input file");
   
-  struct tokenizer t = (struct tokenizer) {
-    .file = input_file,
-    .token = {'\0'},
-    .line_buffer = {'\0'},
-    .line_number = 0,
-  };
-
+  struct tokenizer t = new_tokenizer(input_file);
+  
   while (next_token(&t) > 0) {
     printf("line %d: '%s'\n", t.line_number, t.token);
     consume_token(&t);
