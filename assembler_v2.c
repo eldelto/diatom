@@ -39,14 +39,14 @@ static int next_line(struct tokenizer *t) {
   size_t line_cap = 0;
   ssize_t line_len = 0;
 
-    t->line_number++;
-    line_len = getline(&line, &line_cap, t->file);
-    if (line_len == -1) {
-      if (feof(t->file)) return 0;
+  t->line_number++;
+  line_len = getline(&line, &line_cap, t->file);
+  if (line_len == -1) {
+    if (feof(t->file)) return 0;
 
-      return dlt_errorf("line %d: error while reading line",
-			t->line_number);
-    }
+    return dlt_errorf("line %d: error while reading line",
+		      t->line_number);
+  }
 
 
   if ((unsigned long)line_len > sizeof(t->line_buffer)) {
@@ -149,21 +149,18 @@ static int create_output_file(char *input_filename,
   return err;
 }
 
-static int expect_token(struct tokenizer *t, char *token) {
- if (!dlt_string_equals(t->token, token))
-    return dlt_errorf("line %d: expected '%s' but got '%s'",
-		      t->line_number, token, t->token);
-
- return 0;
-}
+static int parse_error(struct tokenizer *t, char *expected) {
+  return dlt_errorf("line %d: expected '%s' but got '%s'",
+		    t->line_number, expected, t->token);
+}  
 
 static int parse_comment(struct tokenizer *t, FILE *out) {
   (void)out;
   
-  int err = 0;
-  if ((err = expect_token(t, "("))) return err;
-  
+  if (!dlt_string_equals(t->token, "(")) return 0;
   consume_token(t);
+
+  int err = 0;
   while ((err = next_token(t)) > 0) {
     if (dlt_string_equals(t->token, ")")) {
       consume_token(t);
@@ -171,16 +168,15 @@ static int parse_comment(struct tokenizer *t, FILE *out) {
     }
     consume_token(t);
   }
-  
+
+  if (err >= 0) return parse_error(t, ")");
   return err;
 }
-
 
 static int parse_call(struct tokenizer *t, FILE *out) {
   char *token = t->token;
   if (!dlt_string_starts_with(token, "!") || strnlen(token, 2) < 2)
-    return dlt_errorf("line %d: expected '!<word>' but got '%s'",
-		      t->line_number, t->token);
+    return 0;
 
   token++;
 
@@ -229,23 +225,26 @@ static int insert_dictionary_header(char word_name[TOKEN_MAX], FILE *out) {
 }
 
 static int parse_codeword(struct tokenizer *t, FILE *out) {
-  int err = 0;
-  if ((err = expect_token(t, ".codeword"))) return err;
-
+  if (!dlt_string_equals(t->token, ".codeword")) return 0;
   consume_token(t);
-  if ((err = next_token(t)) <= 0) return err;
+
+  int err = 0;
+  if (next_token(t) <= 0) return parse_error(t, "<codeword-name>");
   if ((err = insert_dictionary_header(t->token, out))) return err;
   consume_token(t);
 
   // Resolve the remaining entries.
   while ((err = next_token(t)) > 0) {
+    if ((err = parse_comment(t, out))) return err;
+    if ((err = parse_call(t, out))) return err;
+
     char *token = t->token;
-    
     if (dlt_string_equals(token, ".end")) {
       consume_token(t);
       return 0;
-    } else if (dlt_string_starts_with(token, "!") && strnlen(token, 2) > 1) {
-    } else {
+    }
+
+    if (t->token[0] != '\0') {
       if (fputs(token, out) == EOF) return dlt_error("failed to write to file");
       if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
       consume_token(t);
@@ -259,24 +258,22 @@ static int parse_codeword(struct tokenizer *t, FILE *out) {
 }
 
 static int macro_handler(struct tokenizer *t, FILE *out) {
-  char *token = t->token;
+  int err = 0;
+  if ((err = parse_comment(t, out))) return err;
+  if ((err = parse_call(t, out))) return err;
+  if ((err = parse_codeword(t, out))) return err;
 
-  if (dlt_string_equals(token, "(")) {
-    return parse_comment(t, out);
-  } else if (dlt_string_starts_with(token, "!") && strnlen(token, 2) > 1) {
-    return parse_call(t, out);
-  } else if(dlt_string_equals(token, ".codeword")) {
-    return parse_codeword(t, out);
-  }
   //else if (dlt_string_equals(token, ".var")) {
   //  return var_handler(t, out);
   //} else if (dlt_string_equals(token, ".const")) {
   //  return const_handler(t, out);
 
   // Pipe the token to the output file if nothing matches.
-  if (fputs(token, out) == EOF) return dlt_error("failed to write to file");
-  if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
-  consume_token(t);
+  if (t->token[0] != '\0') {
+    if (fputs(t->token, out) == EOF) return dlt_error("failed to write to file");
+    if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
+    consume_token(t);
+  }
   
   return 0;
 }
