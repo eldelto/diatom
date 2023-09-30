@@ -9,6 +9,7 @@
 #include "util.h"
 
 #define TOKEN_MAX 16
+#define LABEL_MAX TOKEN_MAX + 10
 #define LINE_MAX 90
 
 struct tokenizer {
@@ -21,8 +22,8 @@ struct tokenizer {
 static struct tokenizer new_tokenizer(FILE *f) {
   return (struct tokenizer) {
     .file = f,
-    .token = {'\0'},
-    .line_buffer = {'\0'},
+    .token = "",
+    .line_buffer = "",
     .line_number = 0,
   };
 }
@@ -76,7 +77,7 @@ static int next_token(struct tokenizer *t) {
   
   if (t->token[0] != '\0') return 0;
 
-  char *token = "\0";
+  char *token = "";
   static char *line = NULL;
   
   while (true) {
@@ -174,6 +175,7 @@ static int parse_comment(struct tokenizer *t, FILE *out) {
   return err;
 }
 
+
 static int parse_call(struct tokenizer *t, FILE *out) {
   char *token = t->token;
   if (!dlt_string_starts_with(token, "!") || strnlen(token, 2) < 2)
@@ -181,11 +183,78 @@ static int parse_call(struct tokenizer *t, FILE *out) {
 		      t->line_number, t->token);
 
   token++;
-  
-  if (fprintf(out, "call %s\n", token) < 0)
+
+  if (fprintf(out, "call @_dict%s\n", token) < 0)
     return dlt_error("failed to write to file");
   
   consume_token(t);
+  return 0;
+}
+
+static int insert_dictionary_header(char word_name[TOKEN_MAX], FILE *out) {
+  // Insert the start label.
+  if (fprintf(out, ":%s\n", word_name) < 0)
+    return dlt_error("failed to write to file");
+
+  // Insert the address of the previous word.
+  static char last_word_label[LABEL_MAX] = "";
+  if (last_word_label[0] == '\0') {
+    if (fputs("0\n", out) < 0)
+      return dlt_error("failed to write to file");
+  } else {
+    char dict_label[LABEL_MAX] = "@";
+    strlcat(dict_label, last_word_label, sizeof(dict_label));
+    
+    if (fputs(dict_label, out) == EOF)
+      return dlt_error("failed to write to file");
+    if (fputs("\n", out) == EOF)
+      return dlt_error("failed to write to file");
+  }
+  memcpy(last_word_label, word_name, sizeof(last_word_label));
+
+  // Insert the length and name of the word.
+  const word word_len = strnlen(word_name, TOKEN_MAX);
+  if (fprintf(out, "%d\n", word_len) < 0)
+    return dlt_error("failed to write to file");
+
+  for (unsigned int i = 0; i < word_len; ++i) {
+    if (fprintf(out, "%d\n", (word)word_name[i]) < 0)
+      return dlt_error("faield to write to file");
+  }
+
+  if (fprintf(out, ":_dict%s\n", word_name) < 0)
+    return dlt_error("failed to write to file");
+
+  return 0;
+}
+
+static int parse_codeword(struct tokenizer *t, FILE *out) {
+  int err = 0;
+  if ((err = expect_token(t, ".codeword"))) return err;
+
+  consume_token(t);
+  if ((err = next_token(t)) <= 0) return err;
+  if ((err = insert_dictionary_header(t->token, out))) return err;
+  consume_token(t);
+
+  // Resolve the remaining entries.
+  while ((err = next_token(t)) > 0) {
+    char *token = t->token;
+    
+    if (dlt_string_equals(token, ".end")) {
+      consume_token(t);
+      return 0;
+    } else if (dlt_string_starts_with(token, "!") && strnlen(token, 2) > 1) {
+    } else {
+      if (fputs(token, out) == EOF) return dlt_error("failed to write to file");
+      if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
+      consume_token(t);
+    }
+  }
+
+  // Return from the codeword.
+  if (fputs("return\n", out) == EOF) return dlt_error("failed to write to file");
+  
   return 0;
 }
 
@@ -196,10 +265,10 @@ static int macro_handler(struct tokenizer *t, FILE *out) {
     return parse_comment(t, out);
   } else if (dlt_string_starts_with(token, "!") && strnlen(token, 2) > 1) {
     return parse_call(t, out);
+  } else if(dlt_string_equals(token, ".codeword")) {
+    return parse_codeword(t, out);
   }
-  //else if(dlt_string_equals(token, ".codeword")) {
-  //  return codeword_handler(t, out);
-  //} else if (dlt_string_equals(token, ".var")) {
+  //else if (dlt_string_equals(token, ".var")) {
   //  return var_handler(t, out);
   //} else if (dlt_string_equals(token, ".const")) {
   //  return const_handler(t, out);
