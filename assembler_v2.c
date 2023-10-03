@@ -65,7 +65,7 @@ static int next_line(struct tokenizer *t) {
  cleanup:
   free(line);
   if (err) return err;
-  
+
   return copy_len;
 }
 
@@ -74,12 +74,12 @@ static int next_line(struct tokenizer *t) {
 // error occured.
 static int next_token(struct tokenizer *t) {
   assert(t != NULL);
-  
+
   if (t->token[0] != '\0') return 0;
 
   char *token = "";
   static char *line = NULL;
-  
+
   while (true) {
     if (line == NULL) {
       int line_len = next_line(t);
@@ -152,11 +152,11 @@ static int create_output_file(char *input_filename,
 static int parse_error(struct tokenizer *t, char *expected) {
   return dlt_errorf("line %d: expected '%s' but got '%s'",
 		    t->line_number, expected, t->token);
-}  
+}
 
 static int parse_comment(struct tokenizer *t, FILE *out) {
   (void)out;
-  
+
   if (!dlt_string_equals(t->token, "(")) return 0;
   consume_token(t);
 
@@ -182,7 +182,7 @@ static int parse_call(struct tokenizer *t, FILE *out) {
 
   if (fprintf(out, "call @_dict%s\n", token) < 0)
     return dlt_error("failed to write to file");
-  
+
   consume_token(t);
   return 0;
 }
@@ -200,7 +200,7 @@ static int insert_dictionary_header(char word_name[TOKEN_MAX], FILE *out) {
   } else {
     char dict_label[LABEL_MAX] = "@";
     strlcat(dict_label, last_word_label, sizeof(dict_label));
-    
+
     if (fputs(dict_label, out) == EOF)
       return dlt_error("failed to write to file");
     if (fputs("\n", out) == EOF)
@@ -253,7 +253,40 @@ static int parse_codeword(struct tokenizer *t, FILE *out) {
 
   // Return from the codeword.
   if (fputs("return\n", out) == EOF) return dlt_error("failed to write to file");
-  
+
+  return 0;
+}
+
+static int parse_var(struct tokenizer *t, FILE *out) {
+  if (!dlt_string_equals(t->token, ".var")) return 0;
+  consume_token(t);
+
+  int err = 0;
+  if (next_token(t) <= 0) return parse_error(t, "<var-name>");
+  if ((err = insert_dictionary_header(t->token, out))) return err;
+
+  // Put the variable's address on the data stack and return.
+  if (fprintf(out,
+	      "const\n"
+	      "@_var%s\n"
+	      "return\n", t->token) < 0)
+    return dlt_error("failed to write to file");
+
+  // Store the variable's value with a separate label.
+  if (fprintf(out, ":_var%s\n", t->token) < 0)
+    return dlt_error("failed to write to file");
+  consume_token(t);
+
+  if (next_token(t) <= 0) return parse_error(t, "<var-value>");
+  if (fputs(t->token, out) == EOF) return dlt_error("failed to write to file");
+  if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
+  consume_token(t);
+
+  // Check and consume .end token.
+  if (next_token(t) <= 0) return parse_error(t, ".end");
+  if (!dlt_string_equals(t->token, ".end")) return parse_error(t, ".end");
+  consume_token(t);
+
   return 0;
 }
 
@@ -262,6 +295,7 @@ static int macro_handler(struct tokenizer *t, FILE *out) {
   if ((err = parse_comment(t, out))) return err;
   if ((err = parse_call(t, out))) return err;
   if ((err = parse_codeword(t, out))) return err;
+  if ((err = parse_var(t, out))) return err;
 
   //else if (dlt_string_equals(token, ".var")) {
   //  return var_handler(t, out);
@@ -274,7 +308,7 @@ static int macro_handler(struct tokenizer *t, FILE *out) {
     if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
     consume_token(t);
   }
-  
+
   return 0;
 }
 
