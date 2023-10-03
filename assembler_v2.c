@@ -290,12 +290,35 @@ static int parse_var(struct tokenizer *t, FILE *out) {
   return 0;
 }
 
+static int parse_const(struct tokenizer *t, FILE *out) {
+  if (!dlt_string_equals(t->token, ".const")) return 0;
+  consume_token(t);
+
+  int err = 0;
+  if (next_token(t) <= 0) return parse_error(t, "<const-name>");
+  if ((err = insert_dictionary_header(t->token, out))) return err;
+  consume_token(t);
+
+  if (next_token(t) <= 0) return parse_error(t, "<const-value>");
+  if (fprintf(out, "const %s\nreturn\n", t->token) < 0)
+    return dlt_error("failed to write to file");
+  consume_token(t);
+
+  // Check and consume .end token.
+  if (next_token(t) <= 0) return parse_error(t, ".end");
+  if (!dlt_string_equals(t->token, ".end")) return parse_error(t, ".end");
+  consume_token(t);
+
+  return 0;
+}
+
 static int macro_handler(struct tokenizer *t, FILE *out) {
   int err = 0;
   if ((err = parse_comment(t, out))) return err;
   if ((err = parse_call(t, out))) return err;
   if ((err = parse_codeword(t, out))) return err;
   if ((err = parse_var(t, out))) return err;
+  if ((err = parse_const(t, out))) return err;
 
   //else if (dlt_string_equals(token, ".var")) {
   //  return var_handler(t, out);
