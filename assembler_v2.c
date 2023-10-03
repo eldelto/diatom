@@ -320,11 +320,6 @@ static int macro_handler(struct tokenizer *t, FILE *out) {
   if ((err = parse_var(t, out))) return err;
   if ((err = parse_const(t, out))) return err;
 
-  //else if (dlt_string_equals(token, ".var")) {
-  //  return var_handler(t, out);
-  //} else if (dlt_string_equals(token, ".const")) {
-  //  return const_handler(t, out);
-
   // Pipe the token to the output file if nothing matches.
   if (t->token[0] != '\0') {
     if (fputs(t->token, out) == EOF) return dlt_error("failed to write to file");
