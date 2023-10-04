@@ -11,6 +11,47 @@
 #define TOKEN_MAX 16
 #define LABEL_MAX TOKEN_MAX + 10
 #define LINE_MAX 90
+#define LABELS_MAX 200
+
+struct label {
+  char name[LABEL_MAX];
+  unsigned int address;
+};
+
+// TODO: Allocate on the heap.
+struct label labels[LABELS_MAX] = {
+  (struct label) {
+    .name = "",
+    .address = 0,
+  }
+};
+
+static size_t label_offset = 0;
+static int append_label(char name[LABEL_MAX], unsigned int address) {
+  struct label l = {
+    .name = "",
+    .address = address,
+  };
+  strlcpy(l.name, name, LABEL_MAX);
+  labels[label_offset] = l;
+
+  if (label_offset == (LABELS_MAX - 1))
+    return dlt_error("maximum number of labels reached");
+  
+  ++label_offset;
+  return 0;
+}
+
+static const struct label * find_label(char *name) {
+  for (size_t i = 0; i < label_offset; ++i) {
+    const struct label *const label = &labels[i];
+    if (dlt_string_equals(name, (char *)label->name)) {
+      return label;
+    }
+  }
+
+  return NULL;
+}
 
 struct tokenizer {
   FILE *file;
@@ -308,6 +349,26 @@ static int macro_handler(struct tokenizer *t, FILE *out) {
     if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
     consume_token(t);
   }
+
+  return 0;
+}
+
+static int replace_extension(char *in,
+			     char *out,
+			     size_t out_len,
+			     char *extension) {
+  const size_t in_len = strnlen(in, 100);
+  size_t extension_len = strnlen(extension, 100);
+  if ((in_len + extension_len) >= out_len)
+    return dlt_error("input filename exceeds buffer capacity");
+
+  const char* match_ptr = strstr(in, ".dasm");
+  if (!match_ptr)
+    return dlt_errorf("invalid input filename: '%s' - must end with '.dasm'", in);
+
+  const int index = match_ptr - in;
+  memcpy(out, in, sizeof(char) * in_len);
+  memcpy(out + index, extension, sizeof(char) * ++extension_len);
 
   return 0;
 }

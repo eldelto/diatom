@@ -46,7 +46,7 @@ int dlt_errorf(const char * restrict format, ...) {
 
 /* String functions */
 bool dlt_string_equals(char *a, char *b) {
-  return strncmp(a, b, 20) == 0;
+  return strncmp(a, b, strlen(a)) == 0;
 }
 
 bool dlt_string_starts_with(char *s, char *prefix) {
