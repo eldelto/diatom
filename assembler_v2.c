@@ -371,6 +371,38 @@ static int macro_handler(struct tokenizer *t, FILE *out) {
   return 0;
 }
 
+static int read_label_handler(struct tokenizer *t, FILE *out) {
+  // Suppress unused parameter errors.
+  (void)out;
+  
+  static unsigned int address = 0;
+
+  char *token = t->token;
+  if (token[0] != ':') {
+    ++address;
+    return 0;
+  }
+
+  int err = append_label(token + 1, address);
+  consume_token(t);
+  return err;
+}
+
+static int resolve_label_handler(struct tokenizer *t, FILE *out) {
+  char *token = t->token;
+  if (token[0] == ':') {
+    
+  } else if (token[0] == '@') {
+
+  } else {
+    if (fputs(token, out) == EOF) return dlt_error("failed to write to file");
+    if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
+  }
+
+  consume_token(t);
+  return err;
+}
+
 static int replace_extension(char *in,
 			     char *out,
 			     size_t out_len,
