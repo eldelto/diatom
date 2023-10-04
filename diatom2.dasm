@@ -82,6 +82,7 @@ nop nop
 # F_LENMASK       The length mask in the flags/len byte.
 )
 
+.const konstantin 77 .end
 :test
 	call
 	@_dictadd-x
