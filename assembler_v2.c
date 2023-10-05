@@ -37,7 +37,7 @@ static int append_label(char name[LABEL_MAX], unsigned int address) {
 
   if (label_offset == (LABELS_MAX - 1))
     return dlt_error("maximum number of labels reached");
-  
+
   ++label_offset;
   return 0;
 }
@@ -374,7 +374,7 @@ static int macro_handler(struct tokenizer *t, FILE *out) {
 static int read_label_handler(struct tokenizer *t, FILE *out) {
   // Suppress unused parameter errors.
   (void)out;
-  
+
   static unsigned int address = 0;
 
   char *token = t->token;
@@ -389,18 +389,29 @@ static int read_label_handler(struct tokenizer *t, FILE *out) {
 }
 
 static int resolve_label_handler(struct tokenizer *t, FILE *out) {
+  static unsigned int address = 0;
+
   char *token = t->token;
   if (token[0] == ':') {
-    
+    fprintf(out, "# %s @ %d\n", t->token, address);
   } else if (token[0] == '@') {
+    char *name = token + 1;
+    const struct label *const l = find_label(name);
+    if (l == NULL)
+      return dlt_errorf("line %d: Label '%s' does not exist", t->line_number, name);
 
+    if(fprintf(out, "%d\n", l->address) < 0)
+      return dlt_error("failed to write to file");
+    ++address;
   } else {
+    // Pipe the token to the output file if nothing matches.
     if (fputs(token, out) == EOF) return dlt_error("failed to write to file");
     if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
+    ++address;
   }
 
   consume_token(t);
-  return err;
+  return 0;
 }
 
 static int replace_extension(char *in,
