@@ -146,6 +146,10 @@ static void consume_token(struct tokenizer *t) {
   t->token[0] = '\0';
 }
 
+static bool is_token_consumed(struct tokenizer *t) {
+  return t->token[0] == '\0';
+}
+
 typedef int (*handler)(struct tokenizer *t, FILE *out);
 
 static int translate_file(FILE *in, FILE *out, handler h) {
@@ -279,27 +283,27 @@ static int parse_codeword(struct tokenizer *t, FILE *out) {
     if ((err = parse_comment(t, out))) return err;
     if ((err = parse_call(t, out))) return err;
 
+    if (is_token_consumed(t)) continue;
+    
     char *token = t->token;
     if (dlt_string_equals(token, ".end")) {
+      // Return from the codeword.
+      if (fputs("return\n", out) == EOF) return dlt_error("failed to write to file");
+
       consume_token(t);
       return 0;
     }
 
-    if (t->token[0] != '\0') {
-      if (fputs(token, out) == EOF) return dlt_error("failed to write to file");
-      if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
-      consume_token(t);
-    }
+    if (fputs(token, out) == EOF) return dlt_error("failed to write to file");
+    if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
+    consume_token(t);
   }
-
-  // Return from the codeword.
-  if (fputs("return\n", out) == EOF) return dlt_error("failed to write to file");
-
-  return 0;
+  puts("DAMN");
+  return parse_error(t, ".end");
 }
 
 static int parse_var(struct tokenizer *t, FILE *out) {
-  if (!dlt_string_equals(t->token, ".var")) return 0;
+  if (!dlt_string_equals(t->token, ".var"))  return 0;
   consume_token(t);
 
   int err = 0;
@@ -362,12 +366,12 @@ static int macro_handler(struct tokenizer *t, FILE *out) {
   if ((err = parse_const(t, out))) return err;
 
   // Pipe the token to the output file if nothing matches.
-  if (t->token[0] != '\0') {
-    if (fputs(t->token, out) == EOF) return dlt_error("failed to write to file");
-    if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
-    consume_token(t);
-  }
-
+  if (is_token_consumed(t)) return 0;
+  
+  if (fputs(t->token, out) == EOF) return dlt_error("failed to write to file");
+  if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
+  consume_token(t);
+  
   return 0;
 }
 
@@ -376,14 +380,12 @@ static int read_label_handler(struct tokenizer *t, FILE *out) {
   (void)out;
 
   static unsigned int address = 0;
-
+  
+  int err = 0;
   char *token = t->token;
-  if (token[0] != ':') {
-    ++address;
-    return 0;
-  }
-
-  int err = append_label(token + 1, address);
+  if (token[0] != ':') ++address;
+  else err = append_label(token + 1, address);
+  
   consume_token(t);
   return err;
 }
@@ -393,8 +395,8 @@ static int resolve_label_handler(struct tokenizer *t, FILE *out) {
 
   char *token = t->token;
   if (token[0] == ':') {
-    fprintf(out, "# %s @ %d\n", t->token, address);
-  } else if (token[0] == '@') {
+    fprintf(out, "( %s @ %d )\n", token, address);
+  } else if (token[0] == '@' && strnlen(token, LABEL_MAX) > 1) {
     char *name = token + 1;
     const struct label *const l = find_label(name);
     if (l == NULL)
@@ -414,11 +416,34 @@ static int resolve_label_handler(struct tokenizer *t, FILE *out) {
   return 0;
 }
 
+static int opcode_handler(struct tokenizer *t, FILE *out) {
+  int err = 0;
+  if ((err = parse_comment(t, out))) return err;
+  if (is_token_consumed(t)) return 0;
+  
+  char *token = t->token;
+  int opcode = EXIT;
+  if (isdigit(token[0]) || token[0] == '-') {
+    opcode = atoi(token);
+  } else {
+    opcode = name_to_opcode(token);
+    if (opcode < 0)
+      return dlt_errorf("line %d: '%s' is not a valid instruction",
+			t->line_number, token);
+  }
+
+  if (fwrite(&opcode, sizeof(opcode), 1, out) == 0)
+    return dlt_error("failed to write binary data to .dopc file");
+
+  consume_token(t);
+  return 0;
+}
+
 static int replace_extension(char *in,
 			     char *out,
 			     size_t out_len,
 			     char *extension) {
-  const size_t in_len = strnlen(in, 100);
+  const size_t in_len = strnlen(in, FILENAME_MAX);
   size_t extension_len = strnlen(extension, 100);
   if ((in_len + extension_len) >= out_len)
     return dlt_error("input filename exceeds buffer capacity");
@@ -459,7 +484,23 @@ int main(int argc, char* argv[]) {
   }
 
   char *dasm_filename = argv[1];
-  if (create_output_file(dasm_filename, "dasm2.dexp", macro_handler, "w"))
+  char dexp_filename[FILENAME_MAX] = "";
+  char dins_filename[FILENAME_MAX] = "";
+  char dopc_filename[FILENAME_MAX] = "";
+  if (replace_extension(dasm_filename, dexp_filename, FILENAME_MAX, ".dexp"))
+    dlt_panic();
+  if (replace_extension(dasm_filename, dins_filename, FILENAME_MAX, ".dins"))
+    dlt_panic();
+  if (replace_extension(dasm_filename, dopc_filename, FILENAME_MAX, ".dopc"))
+    dlt_panic();
+
+  if (create_output_file(dasm_filename, dexp_filename, macro_handler, "w"))
+    dlt_panic();
+  if (create_output_file(dexp_filename, dins_filename, read_label_handler, "w"))
+    dlt_panic();
+  if (create_output_file(dexp_filename, dins_filename, resolve_label_handler, "w"))
+    dlt_panic();
+  if (create_output_file(dins_filename, dopc_filename, opcode_handler, "wb"))
     dlt_panic();
 
   return EXIT_SUCCESS;

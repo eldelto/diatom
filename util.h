@@ -45,8 +45,12 @@ int dlt_errorf(const char * restrict format, ...) {
 }
 
 /* String functions */
+#define STR_MAX 256
+
 bool dlt_string_equals(char *a, char *b) {
-  return strncmp(a, b, strlen(a)) == 0;
+  size_t a_len = strnlen(a, STR_MAX);
+  size_t b_len = strnlen(b, STR_MAX);
+  return a_len == b_len && strncmp(a, b, a_len) == 0;
 }
 
 bool dlt_string_starts_with(char *s, char *prefix) {
@@ -60,7 +64,6 @@ double dlt_clamp_value(double value, double min, double max) {
   else return value;
 }
 
-#define STR_MAX 256
 void dlt_trim_string(char *string) {
   if (string == NULL || strnlen(string, STR_MAX) == 0) return;
 

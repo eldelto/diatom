@@ -83,19 +83,8 @@ nop nop
 )
 
 .const konstantin 77 .end
-:test
-	call
-	@_dictadd-x
-	call
-	@_dictquadruple
-	const
-	65
-	emit
-	call
-	@_dictnon-blank-key
-	emit
-	exit
-	
+.codeword main word drop emit-word exit .end
+	   	
 :start
 call
 @_dictmain
