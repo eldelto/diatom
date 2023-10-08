@@ -4,6 +4,7 @@ jump
 
 ( Machine words )
 ( TODO: Do we even need them? )
+(
 .codeword exit exit .end
 .codeword nop nop .end
 .codeword @ fetch .end
@@ -24,6 +25,7 @@ jump
 .codeword not not .end
 .codeword < lt .end
 .codeword > gt .end
+)
 
 ( Reserve 11 bytes for the buffer of our 'word' word. )
 .var word-buffer 0 .end
@@ -32,34 +34,34 @@ nop nop nop nop
 nop nop
 .var word-cursor 0 .end
 
-.codeword word-cursor+1 !word-cursor @ 1 + dup !word-cursor ! .end
-.codeword reset-word-cursor 0 !word-cursor ! .end
-.codeword store-in-word word-buffer !word-cursor+1 + ! .end
-.codeword finish-word word-cursor @ !word-buffer ! !reset-word-cursor .end
+.codeword word-cursor+1 !word-cursor fetch const 1 add dup !word-cursor store .end
+.codeword reset-word-cursor const 0 !word-cursor store .end
+.codeword store-in-word !word-buffer !word-cursor+1 add store .end
+.codeword finish-word !word-cursor fetch !word-buffer store !reset-word-cursor .end
 .codeword is-blank? const 32 equals .end
 .codeword non-blank-key
-  key dup const 32 equals not @nbk1 jumpif
-  drop @_dictnon-blank-key jump :nbk1
+  key dup const 32 equals not const @nbk1 jumpif
+  drop const @_dictnon-blank-key jump :nbk1
 .end
 .codeword word
   !non-blank-key
   :word1 !store-in-word
-  key dup !is-blank? not @word1 jumpif
+  key dup !is-blank? not const @word1 jumpif
   drop !finish-word !word-buffer
 .end
 
 .var emit-word-cursor 0 .end
-.codeword reset-emit-word-cursor 0 !emit-word-cursor ! .end
+.codeword reset-emit-word-cursor const 0 !emit-word-cursor store .end
 .codeword emit-word-cursor+1
-  !emit-word-cursor @ 1 +
-  !emit-word-cursor !
-  !emit-word-cursor @
+  !emit-word-cursor fetch const 1 add
+  !emit-word-cursor store
+  !emit-word-cursor fetch
 .end
 .codeword emit-word
   !reset-emit-word-cursor
-  :emit-word1 !word-buffer @ !emit-word-cursor+1 > not @emit-word2 jumpif
-  !word-buffer !emit-word-cursor @ + @ emit
-  @emit-word1 jump
+  :emit-word1 !word-buffer fetch !emit-word-cursor+1 gt not const @emit-word2 jumpif
+  !word-buffer !emit-word-cursor fetch add fetch emit
+  const @emit-word1 jump
   :emit-word2
 .end
 
@@ -83,9 +85,13 @@ nop nop
 )
 
 .const konstantin 77 .end
-.codeword main word drop emit-word exit .end
+.codeword main !word drop !emit-word exit .end
 	   	
 :start
+const 60
+const 5
+add
+emit
 call
 @_dictmain
 exit

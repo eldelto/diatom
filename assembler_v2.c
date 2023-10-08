@@ -8,7 +8,7 @@
 #include "diatom.h"
 #include "util.h"
 
-#define TOKEN_MAX 16
+#define TOKEN_MAX 30
 #define LABEL_MAX TOKEN_MAX + 10
 #define LINE_MAX 90
 #define LABELS_MAX 200
