@@ -212,9 +212,13 @@ int main(int argc, char* argv[]) {
       push(z);
       break;
     }
-    case JUMP: {
-      instruction_pointer = pop();
-      continue;
+    case CJUMP: {
+      ++instruction_pointer;
+      if ((int)pop() == -1) {
+	instruction_pointer = memory[instruction_pointer];
+	continue;
+      }
+      break;
     }
     case CALL: {
       rpush(instruction_pointer + 2);
@@ -238,14 +242,6 @@ int main(int argc, char* argv[]) {
     case EQUALS: {
       if (pop() == pop()) push(-1);
       else push(0);
-      break;
-    }
-    case JUMPIF: {
-      const word address = pop();
-      if ((int)pop() == -1) {
-	instruction_pointer = address;
-	continue;
-      }
       break;
     }
     case NOT: {

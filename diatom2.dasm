@@ -1,6 +1,7 @@
 const
+-1
+cjump
 @start
-jump
 
 ( Machine words )
 ( TODO: Do we even need them? )
@@ -40,13 +41,13 @@ nop nop
 .codeword finish-word !word-cursor fetch !word-buffer store !reset-word-cursor .end
 .codeword is-blank? const 32 equals .end
 .codeword non-blank-key
-  key dup const 32 equals not const @nbk1 jumpif
-  drop const @_dictnon-blank-key jump :nbk1
+  key dup const 32 equals not cjump @nbk1
+  drop const -1 cjump @_dictnon-blank-key :nbk1
 .end
 .codeword word
   !non-blank-key
   :word1 !store-in-word
-  key dup !is-blank? not const @word1 jumpif
+  key dup !is-blank? not cjump @word1
   drop !finish-word !word-buffer
 .end
 
@@ -59,9 +60,9 @@ nop nop
 .end
 .codeword emit-word
   !reset-emit-word-cursor
-  :emit-word1 !word-buffer fetch !emit-word-cursor+1 gt not const @emit-word2 jumpif
+  :emit-word1 !word-buffer fetch !emit-word-cursor+1 gt not cjump @emit-word2
   !word-buffer !emit-word-cursor fetch add fetch emit
-  const @emit-word1 jump
+  const -1 cjump @emit-word1
   :emit-word2
 .end
 

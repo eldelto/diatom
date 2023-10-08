@@ -3,7 +3,7 @@
 
 #include "util.h"
 
-#define INSTRUCTION_COUNT 24
+#define INSTRUCTION_COUNT 23
 #define INSTRUCTION_NAME_MAX 10
 #define WORD_NAME_MAX 10
 
@@ -21,13 +21,12 @@ enum instructions {
   DROP,
   SWAP,
   OVER,
-  JUMP,
+  CJUMP,
   CALL,
   RETURN,
   KEY,
   EMIT,
   EQUALS,
-  JUMPIF,
   NOT,
   LT,
   GT,
@@ -48,13 +47,12 @@ char instruction_names[INSTRUCTION_COUNT][INSTRUCTION_NAME_MAX] = {
   "drop",
   "swap",
   "over",
-  "jump",
+  "cjump",
   "call",
   "return",
   "key",
   "emit",
   "equals",
-  "jumpif",
   "not",
   "lt",
   "gt",
