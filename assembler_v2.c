@@ -288,7 +288,7 @@ static int parse_codeword(struct tokenizer *t, FILE *out) {
     char *token = t->token;
     if (dlt_string_equals(token, ".end")) {
       // Return from the codeword.
-      if (fputs("return\n", out) == EOF) return dlt_error("failed to write to file");
+      if (fputs("ret\n", out) == EOF) return dlt_error("failed to write to file");
 
       consume_token(t);
       return 0;
@@ -314,7 +314,7 @@ static int parse_var(struct tokenizer *t, FILE *out) {
   if (fprintf(out,
 	      "const\n"
 	      "@_var%s\n"
-	      "return\n", t->token) < 0)
+	      "ret\n", t->token) < 0)
     return dlt_error("failed to write to file");
 
   // Store the variable's value with a separate label.
@@ -345,7 +345,7 @@ static int parse_const(struct tokenizer *t, FILE *out) {
   consume_token(t);
 
   if (next_token(t) <= 0) return parse_error(t, "<const-value>");
-  if (fprintf(out, "const %s\nreturn\n", t->token) < 0)
+  if (fprintf(out, "const %s\nret\n", t->token) < 0)
     return dlt_error("failed to write to file");
   consume_token(t);
 

@@ -1,32 +1,9 @@
 const
 -1
-cjump
+cjmp
 @start
 
 ( Machine words )
-( TODO: Do we even need them? )
-(
-.codeword exit exit .end
-.codeword nop nop .end
-.codeword @ fetch .end
-.codeword ! store .end
-.codeword + add .end
-.codeword - subtract .end
-.codeword * multiply .end
-.codeword / divide .end
-.codeword dup dup .end
-.codeword drop drop .end
-.codeword swap swap .end
-.codeword over over .end
-.codeword call call .end
-.codeword ; return .end
-.codeword key key .end
-.codeword emit emit .end
-.codeword = equals .end
-.codeword not not .end
-.codeword < lt .end
-.codeword > gt .end
-)
 
 ( Reserve 11 bytes for the buffer of our 'word' word. )
 .var word-buffer 0 .end
@@ -35,34 +12,34 @@ nop nop nop nop
 nop nop
 .var word-cursor 0 .end
 
-.codeword word-cursor+1 !word-cursor fetch const 1 add dup !word-cursor store .end
-.codeword reset-word-cursor const 0 !word-cursor store .end
-.codeword store-in-word !word-buffer !word-cursor+1 add store .end
-.codeword finish-word !word-cursor fetch !word-buffer store !reset-word-cursor .end
-.codeword is-blank? const 32 equals .end
+.codeword word-cursor+1 !word-cursor @ const 1 + dup !word-cursor ! .end
+.codeword reset-word-cursor const 0 !word-cursor ! .end
+.codeword store-in-word !word-buffer !word-cursor+1 + ! .end
+.codeword finish-word !word-cursor @ !word-buffer ! !reset-word-cursor .end
+.codeword is-blank? const 32 = .end
 .codeword non-blank-key
-  key dup const 32 equals not cjump @nbk1
-  drop const -1 cjump @_dictnon-blank-key :nbk1
+  key dup const 32 = ~ cjmp @nbk1
+  drop const -1 cjmp @_dictnon-blank-key :nbk1
 .end
 .codeword word
   !non-blank-key
   :word1 !store-in-word
-  key dup !is-blank? not cjump @word1
+  key dup !is-blank? ~ cjmp @word1
   drop !finish-word !word-buffer
 .end
 
 .var emit-word-cursor 0 .end
-.codeword reset-emit-word-cursor const 0 !emit-word-cursor store .end
+.codeword reset-emit-word-cursor const 0 !emit-word-cursor ! .end
 .codeword emit-word-cursor+1
-  !emit-word-cursor fetch const 1 add
-  !emit-word-cursor store
-  !emit-word-cursor fetch
+  !emit-word-cursor @ const 1 +
+  !emit-word-cursor !
+  !emit-word-cursor @
 .end
 .codeword emit-word
   !reset-emit-word-cursor
-  :emit-word1 !word-buffer fetch !emit-word-cursor+1 gt not cjump @emit-word2
-  !word-buffer !emit-word-cursor fetch add fetch emit
-  const -1 cjump @emit-word1
+  :emit-word1 !word-buffer @ !emit-word-cursor+1 > ~ cjmp @emit-word2
+  !word-buffer !emit-word-cursor @ + @ emit
+  const -1 cjmp @emit-word1
   :emit-word2
 .end
 
@@ -78,7 +55,7 @@ nop nop
 
 ( Built-in constants
 # VERSION         Is the current version of this FORTH.
-# R0              The address of the top of the return stack.
+# R0              The +ress of the top of the return stack.
 # DOCOL           Pointer to DOCOL.
 # F_IMMED         The IMMEDIATE flag's actual value.
 # F_HIDDEN        The HIDDEN flag's actual value.
@@ -91,7 +68,7 @@ nop nop
 :start
 const 60
 const 5
-add
++
 emit
 call
 @_dictmain
