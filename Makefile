@@ -6,7 +6,6 @@ CC := clang
 # Set additional compiler flags.
 CFLAGS  := -Wall -Werror -Wextra -pedantic-errors \
 	-ftrapv \
-#	-fcatch-undefined-behavior \
 	-Wno-macro-redefined \
         -D_FORTIFY_SOURCE=2 \
         -fsanitize=address \

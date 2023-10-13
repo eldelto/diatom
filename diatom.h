@@ -7,6 +7,9 @@
 #define INSTRUCTION_NAME_MAX 10
 #define WORD_NAME_MAX 10
 
+typedef unsigned char byte;
+typedef unsigned int word;
+
 enum instructions {
   EXIT,
   NOP,
@@ -59,13 +62,11 @@ char instruction_names[INSTRUCTION_COUNT][INSTRUCTION_NAME_MAX] = {
   "rpop",
 };
 
-int name_to_opcode(char* name) {
+byte name_to_opcode(char* name) {
     for (unsigned int i = 0; i < INSTRUCTION_COUNT; ++i)
       if (dlt_string_equals(instruction_names[i], name)) return i;
 
     return -1;
 }
-
-typedef unsigned int word;
 
 #endif
