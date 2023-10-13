@@ -425,6 +425,9 @@ static int opcode_handler(struct tokenizer *t, FILE *out) {
   int opcode = EXIT;
   if (isdigit(token[0]) || token[0] == '-') {
     opcode = atoi(token);
+    if (opcode > 127 || opcode < -128)
+      return dlt_errorf("line %d: '%s' is larger than a single byte",
+			t->line_number, token);
   } else {
     opcode = name_to_opcode(token);
     if (opcode < 0)
@@ -432,7 +435,8 @@ static int opcode_handler(struct tokenizer *t, FILE *out) {
 			t->line_number, token);
   }
 
-  if (fwrite(&opcode, sizeof(opcode), 1, out) == 0)
+  const byte b_opcode = (byte)opcode;
+  if (fwrite(&b_opcode, sizeof(b_opcode), 1, out) == 0)
     return dlt_error("failed to write binary data to .dopc file");
 
   consume_token(t);
