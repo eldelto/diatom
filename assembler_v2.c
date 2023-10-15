@@ -15,7 +15,7 @@
 
 struct label {
   char name[LABEL_MAX];
-  unsigned int address;
+  word address;
 };
 
 // TODO: Allocate on the heap.
@@ -260,7 +260,7 @@ static int insert_dictionary_header(char word_name[TOKEN_MAX], FILE *out) {
 
   for (unsigned int i = 0; i < word_len; ++i) {
     if (fprintf(out, "%d\n", (word)word_name[i]) < 0)
-      return dlt_error("faield to write to file");
+      return dlt_error("failed to write to file");
   }
 
   if (fprintf(out, ":_dict%s\n", word_name) < 0)
@@ -376,7 +376,7 @@ static int macro_handler(struct tokenizer *t, FILE *out) {
 
     for (unsigned int i = 0; i < WORD_SIZE; ++i)
       if (fprintf(out, "%d\n", bytes[i]) < 0)
-	return dlt_error("faield to write to file");
+	return dlt_error("failed to write to file");
   } else {
     if (fputs(token, out) == EOF) return dlt_error("failed to write to file");
     if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
@@ -394,8 +394,9 @@ static int read_label_handler(struct tokenizer *t, FILE *out) {
   
   int err = 0;
   char *token = t->token;
-  if (token[0] != ':') ++address;
-  else err = append_label(token + 1, address);
+  if (token[0] == ':') append_label(token + 1, address);
+  else if (token[0] == '@' && strnlen(token, LABEL_MAX) > 1) address += WORD_SIZE;
+  else ++address;
   
   consume_token(t);
   return err;
@@ -407,16 +408,26 @@ static int resolve_label_handler(struct tokenizer *t, FILE *out) {
   char *token = t->token;
   if (token[0] == ':') {
     if (fprintf(out, "( %s @ %d )\n", token, address) < 0)
-      return dlt_error("faield to write to file");
+      return dlt_error("failed to write to file");
   } else if (token[0] == '@' && strnlen(token, LABEL_MAX) > 1) {
     char *name = token + 1;
     const struct label *const l = find_label(name);
     if (l == NULL)
       return dlt_errorf("line %d: Label '%s' does not exist", t->line_number, name);
 
-    if (fprintf(out, "%d\n", l->address) < 0)
-      return dlt_error("failed to write to file");
-    ++address;
+    if (fprintf(out, "( @%s @ %d -> %d )\n",
+		l->name, address, l->address) < 0)
+            return dlt_error("failed to write to file");
+    
+    byte bytes[WORD_SIZE] = {0};
+    word_to_bytes(l->address, bytes);
+
+    for (unsigned int i = 0; i < WORD_SIZE; ++i) {
+      if (fprintf(out, "%d\n", bytes[i]) < 0)
+	return dlt_error("failed to write to file");
+      
+      ++address;
+    }
   } else {
     // Pipe the token to the output file if nothing matches.
     if (fputs(token, out) == EOF) return dlt_error("failed to write to file");
