@@ -367,9 +367,20 @@ static int macro_handler(struct tokenizer *t, FILE *out) {
 
   // Pipe the token to the output file if nothing matches.
   if (is_token_consumed(t)) return 0;
-  
-  if (fputs(t->token, out) == EOF) return dlt_error("failed to write to file");
-  if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
+
+  char *token = t->token;
+  if (isdigit(token[0]) || token[0] == '-') {
+    const int number = atoi(token);
+    byte bytes[WORD_SIZE] = {0};
+    word_to_bytes((word)number, bytes);
+
+    for (unsigned int i = 0; i < WORD_SIZE; ++i)
+      if (fprintf(out, "%d\n", bytes[i]) < 0)
+	return dlt_error("faield to write to file");
+  } else {
+    if (fputs(token, out) == EOF) return dlt_error("failed to write to file");
+    if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
+  }
   consume_token(t);
   
   return 0;
@@ -395,14 +406,15 @@ static int resolve_label_handler(struct tokenizer *t, FILE *out) {
 
   char *token = t->token;
   if (token[0] == ':') {
-    fprintf(out, "( %s @ %d )\n", token, address);
+    if (fprintf(out, "( %s @ %d )\n", token, address) < 0)
+      return dlt_error("faield to write to file");
   } else if (token[0] == '@' && strnlen(token, LABEL_MAX) > 1) {
     char *name = token + 1;
     const struct label *const l = find_label(name);
     if (l == NULL)
       return dlt_errorf("line %d: Label '%s' does not exist", t->line_number, name);
 
-    if(fprintf(out, "%d\n", l->address) < 0)
+    if (fprintf(out, "%d\n", l->address) < 0)
       return dlt_error("failed to write to file");
     ++address;
   } else {
@@ -425,9 +437,9 @@ static int opcode_handler(struct tokenizer *t, FILE *out) {
   int opcode = EXIT;
   if (isdigit(token[0]) || token[0] == '-') {
     opcode = atoi(token);
-    if (opcode > 127 || opcode < -128)
-      return dlt_errorf("line %d: '%s' is larger than a single byte",
-			t->line_number, token);
+//    if (opcode > 127 || opcode < -128)
+//      return dlt_errorf("line %d: '%s' is larger than a single byte",
+//			t->line_number, token);
   } else {
     opcode = name_to_opcode(token);
     if (opcode < 0)

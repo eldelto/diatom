@@ -9,6 +9,7 @@
 
 typedef unsigned char byte;
 typedef unsigned int word;
+#define WORD_SIZE (sizeof(word) / sizeof(byte))
 
 enum instructions {
   EXIT,
@@ -67,6 +68,12 @@ byte name_to_opcode(char* name) {
       if (dlt_string_equals(instruction_names[i], name)) return i;
 
     return -1;
+}
+
+void word_to_bytes(word w, byte buff[WORD_SIZE]) {
+  for (unsigned int i = 0; i < WORD_SIZE; ++i) {
+    buff[WORD_SIZE - (i+1)] = (w >> (i * 8)) & 0xFFu;
+  }
 }
 
 #endif
