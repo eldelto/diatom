@@ -232,6 +232,17 @@ static int parse_call(struct tokenizer *t, FILE *out) {
   return 0;
 }
 
+static int output_as_bytes(word w, FILE *out) {
+    byte bytes[WORD_SIZE] = {0};
+    word_to_bytes(w, bytes);
+
+    for (unsigned int i = 0; i < WORD_SIZE; ++i)
+      if (fprintf(out, "%d\n", bytes[i]) < 0)
+	return dlt_error("failed to write to file");
+
+    return 0;
+}
+
 static int insert_dictionary_header(char word_name[TOKEN_MAX], FILE *out) {
   // Insert the start label.
   if (fprintf(out, ":%s\n", word_name) < 0)
@@ -323,8 +334,13 @@ static int parse_var(struct tokenizer *t, FILE *out) {
   consume_token(t);
 
   if (next_token(t) <= 0) return parse_error(t, "<var-value>");
-  if (fputs(t->token, out) == EOF) return dlt_error("failed to write to file");
-  if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
+
+  char *token = t->token;
+  if (!isdigit(token[0]) && !(token[0] == '-'))
+    return parse_error(t, "<numeric-literal>");
+  
+  const int number = atoi(token);
+  if ((err = output_as_bytes((word)number, out))) return err;
   consume_token(t);
 
   // Check and consume .end token.
@@ -344,9 +360,20 @@ static int parse_const(struct tokenizer *t, FILE *out) {
   if ((err = insert_dictionary_header(t->token, out))) return err;
   consume_token(t);
 
+  // Output numeric literal as constant on the stack.
   if (next_token(t) <= 0) return parse_error(t, "<const-value>");
-  if (fprintf(out, "const %s\nret\n", t->token) < 0)
-    return dlt_error("failed to write to file");
+
+  if (fputs("const", out) == EOF) return dlt_error("failed to write to file");
+  if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
+
+  char *token = t->token;
+  if (!isdigit(token[0]) && !(token[0] == '-'))
+    return parse_error(t, "<numeric-literal>");
+  
+  const int number = atoi(token);
+  if ((err = output_as_bytes((word)number, out))) return err;
+  if (fputs("ret", out) == EOF) return dlt_error("failed to write to file");
+  if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
   consume_token(t);
 
   // Check and consume .end token.
@@ -371,12 +398,7 @@ static int macro_handler(struct tokenizer *t, FILE *out) {
   char *token = t->token;
   if (isdigit(token[0]) || token[0] == '-') {
     const int number = atoi(token);
-    byte bytes[WORD_SIZE] = {0};
-    word_to_bytes((word)number, bytes);
-
-    for (unsigned int i = 0; i < WORD_SIZE; ++i)
-      if (fprintf(out, "%d\n", bytes[i]) < 0)
-	return dlt_error("failed to write to file");
+    if ((err = output_as_bytes((word)number, out))) return err;
   } else {
     if (fputs(token, out) == EOF) return dlt_error("failed to write to file");
     if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
@@ -418,16 +440,10 @@ static int resolve_label_handler(struct tokenizer *t, FILE *out) {
     if (fprintf(out, "( @%s @ %d -> %d )\n",
 		l->name, address, l->address) < 0)
             return dlt_error("failed to write to file");
-    
-    byte bytes[WORD_SIZE] = {0};
-    word_to_bytes(l->address, bytes);
 
-    for (unsigned int i = 0; i < WORD_SIZE; ++i) {
-      if (fprintf(out, "%d\n", bytes[i]) < 0)
-	return dlt_error("failed to write to file");
-      
-      ++address;
-    }
+    int err = 0;
+    if ((err = output_as_bytes(l->address, out))) return err;      
+    address += WORD_SIZE;
   } else {
     // Pipe the token to the output file if nothing matches.
     if (fputs(token, out) == EOF) return dlt_error("failed to write to file");
