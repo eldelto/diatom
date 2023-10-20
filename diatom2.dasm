@@ -66,10 +66,6 @@ nop nop
 .codeword main !word drop !emit-word exit .end
 	   	
 :start
-const 60
-const 5
-+
-emit
 call
 @_dictmain
 exit

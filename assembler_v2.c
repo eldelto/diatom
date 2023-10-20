@@ -305,11 +305,16 @@ static int parse_codeword(struct tokenizer *t, FILE *out) {
       return 0;
     }
 
-    if (fputs(token, out) == EOF) return dlt_error("failed to write to file");
-    if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
+    if (isdigit(token[0]) || token[0] == '-') {
+      const int number = atoi(token);
+      if ((err = output_as_bytes((word)number, out))) return err;
+    } else {
+      if (fputs(token, out) == EOF) return dlt_error("failed to write to file");
+      if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
+    }
     consume_token(t);
   }
-  puts("DAMN");
+
   return parse_error(t, ".end");
 }
 

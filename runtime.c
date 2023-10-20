@@ -37,7 +37,7 @@ struct input {
   size_t cursor;
 };
 
-char next_char(struct input *i) {
+byte next_char(struct input *i) {
   if (i->cursor >= i->len) {
     size_t len = fread(i->buffer, sizeof(i->buffer[0]), 1, stdin);
     if (len == 0) {
@@ -49,7 +49,7 @@ char next_char(struct input *i) {
     i->cursor = 0;
   }
 
-  return i->buffer[i->cursor++];
+  return (byte)i->buffer[i->cursor++];
 }
 
 /* VM State */
@@ -141,7 +141,7 @@ static word fetch_word(word addr) {
 }
 
 static void store_word(word addr, word w) {
-  byte buf[WORD_SIZE] = {0};
+  byte buf[WORD_SIZE] = { 0 };
   word_to_bytes(w, buf);
 
   for (unsigned int i = 0; i < WORD_SIZE; ++i)
@@ -247,11 +247,14 @@ int main(int argc, char* argv[]) {
 	printf("jumping to @%du\n", instruction_pointer);
 	continue;
       }
-      break;
+
+      instruction_pointer += WORD_SIZE;
+      continue;
     }
     case CALL: {
-      rpush(instruction_pointer + 1 + WORD_SIZE);
-      instruction_pointer = fetch_word(instruction_pointer + 1);
+      ++instruction_pointer;
+      rpush(instruction_pointer + WORD_SIZE);
+      instruction_pointer = fetch_word(instruction_pointer);
       continue;
     }
     case RETURN: {
@@ -264,8 +267,8 @@ int main(int argc, char* argv[]) {
       break;
     }
     case EMIT: {
-      putchar((char)pop());
-      //printf("'%c'\n", (char)pop());
+      //putchar((char)pop());
+      printf("'%c'\n", (char)pop());
       break;
     }
     case EQUALS: {
