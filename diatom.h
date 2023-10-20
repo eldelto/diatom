@@ -70,9 +70,9 @@ byte name_to_opcode(char* name) {
     return -1;
 }
 
-void word_to_bytes(word w, byte buff[WORD_SIZE]) {
+void word_to_bytes(word w, byte buf[WORD_SIZE]) {
   for (unsigned int i = 0; i < WORD_SIZE; ++i) {
-    buff[WORD_SIZE - (i+1)] = (w >> (i * 8)) & 0xFFu;
+    buf[WORD_SIZE - (i+1)] = (w >> (i * 8)) & 0xFFu;
   }
 }
 
