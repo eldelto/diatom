@@ -14,7 +14,7 @@ nop nop
 
 .codeword word-cursor+1 !word-cursor @ const 1 + dup !word-cursor ! .end
 .codeword reset-word-cursor const 0 !word-cursor ! .end
-.codeword store-in-word !word-buffer !word-cursor+1 + ! .end
+.codeword store-in-word !word-buffer !word-cursor+1 const 4 + + b! .end
 .codeword finish-word !word-cursor @ !word-buffer ! !reset-word-cursor .end
 .codeword is-blank? const 32 = .end
 .codeword non-blank-key
@@ -38,7 +38,7 @@ nop nop
 .codeword emit-word
   !reset-emit-word-cursor
   :emit-word1 !word-buffer @ !emit-word-cursor+1 > ~ cjmp @emit-word2
-  !word-buffer !emit-word-cursor @ + @ emit
+  !word-buffer !emit-word-cursor @ const 4 + + b@ emit
   const -1 cjmp @emit-word1
   :emit-word2
 .end

@@ -167,7 +167,7 @@ int main(int argc, char* argv[]) {
     const word instruction = memory[instruction_pointer];
 
     printf("ds -> ");
-    for (int i = data_stack->pointer -1; i >= 0; --i)
+    for (int i = data_stack->pointer - 1; i >= 0; --i)
       printf("%d ", data_stack->data[i]);
     
     printf("| rs -> %d | ip = %d | instr = %s\n",
@@ -268,7 +268,7 @@ int main(int argc, char* argv[]) {
     }
     case EMIT: {
       //putchar((char)pop());
-      printf("'%c'\n", (char)pop());
+      printf("\n-->'%c'\n\n", (char)pop());
       break;
     }
     case EQUALS: {
@@ -292,6 +292,17 @@ int main(int argc, char* argv[]) {
     }
     case RPOP: {
       push(rpop());
+      break;
+    }
+    case BFETCH: {
+      const word address = pop();
+      push(fetch_byte(address));
+      break;
+    }
+    case BSTORE: {
+      puts("bstore!");
+      const word address = pop();
+      store_byte(address, pop() & 0xFF);
       break;
     }
 //    case NATIVE: {
