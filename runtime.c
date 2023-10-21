@@ -37,7 +37,7 @@ struct input {
   size_t cursor;
 };
 
-char next_char(struct input *i) {
+byte next_char(struct input *i) {
   if (i->cursor >= i->len) {
     size_t len = fread(i->buffer, sizeof(i->buffer[0]), 1, stdin);
     if (len == 0) {
@@ -49,14 +49,13 @@ char next_char(struct input *i) {
     i->cursor = 0;
   }
 
-  return i->buffer[i->cursor++];
+  return (byte)i->buffer[i->cursor++];
 }
 
 /* VM State */
 
 // Registers
 word instruction_pointer = 0;
-word r0 = 0;
 
 // Stacks
 struct stack* data_stack = &(struct stack) {
@@ -70,7 +69,7 @@ struct stack* return_stack = &(struct stack) {
 };
 
 // Memory
-word memory[MEMORY_SIZE] = { EXIT };
+byte memory[MEMORY_SIZE] = { EXIT };
 struct input input_buffer = (struct input) {
   .buffer = { '\0' },
   .len = 0,
@@ -98,9 +97,9 @@ inline static word rpop(void) {
   return stack_pop(return_stack);
 }
 
-//inline static word rpeek(void) {
-//  return stack_peek(return_stack);
-//}
+inline static word rpeek(void) {
+  return stack_peek(return_stack);
+}
 
 static int init_memory(char *filename) {
   FILE* input_file = fopen(filename, "r");
@@ -108,9 +107,9 @@ static int init_memory(char *filename) {
     return dlt_error("failed to open input file");
   }
 
-  unsigned int memory_offset = 0;
+  word memory_offset = 0;
   int err = 0;
-  while (fread(&memory[memory_offset], 1, sizeof(word), input_file)) {
+  while (fread(&memory[memory_offset], 1, sizeof(byte), input_file)) {
     if (++memory_offset >= MEMORY_SIZE) {
       err = dlt_error("exceeded available memory");
       break;
@@ -119,6 +118,34 @@ static int init_memory(char *filename) {
 
   fclose(input_file);
   return err;
+}
+
+static byte fetch_byte(word addr) {
+  return memory[addr];
+}
+
+static void store_byte(word addr, byte b) {
+  memory[addr] = b;
+}
+
+static word fetch_word(word addr) {
+  word w = 0;
+  for (unsigned int i = 0; i < WORD_SIZE; ++i) {
+    word b = (word)fetch_byte(addr + i);
+    printf("fetch: %d @ %d = %d %d << %lu \n", b, addr+i, w,  (b << (WORD_SIZE - (i+1)) * sizeof(byte)),
+      (WORD_SIZE - (i+1)) * 8);
+    w |= (b << (WORD_SIZE - (i+1)) * 8);
+  }
+
+  return w;
+}
+
+static void store_word(word addr, word w) {
+  byte buf[WORD_SIZE] = { 0 };
+  word_to_bytes(w, buf);
+
+  for (unsigned int i = 0; i < WORD_SIZE; ++i)
+    store_byte(addr + i, buf[i]);
 }
 
 static void usage(void) {
@@ -139,12 +166,12 @@ int main(int argc, char* argv[]) {
   while (instruction_pointer < MEMORY_SIZE) {
     const word instruction = memory[instruction_pointer];
 
-//    printf("ds -> ");
-//    for (int i = data_stack->pointer -1; i >= 0; --i)
-//      printf("%d ", data_stack->data[i]);
-//    
-//    printf("| rs -> %d | ip = %d | r0 = %d | instr = %s\n",
-//	   rpeek(), instruction_pointer, r0, instruction_names[instruction]);
+    printf("ds -> ");
+    for (int i = data_stack->pointer - 1; i >= 0; --i)
+      printf("%d ", data_stack->data[i]);
+    
+    printf("| rs -> %d | ip = %d | instr = %s\n",
+	   rpeek(), instruction_pointer, instruction_names[instruction]);
 
     switch (instruction) {
     case EXIT: {
@@ -156,18 +183,19 @@ int main(int argc, char* argv[]) {
     }
     case CONST: {
       ++instruction_pointer;
-      const word value = memory[instruction_pointer];
-      push(value);
-      break;
+      push(fetch_word(instruction_pointer));
+
+      instruction_pointer += WORD_SIZE;
+      continue;
     }
     case FETCH: {
       const word address = pop();
-      push(memory[address]);
+      push(fetch_word(address));
       break;
     }
     case STORE: {
       const word address = pop();
-      memory[address] = pop();
+      store_word(address, pop());
       break;
     }
     case ADD: {
@@ -215,14 +243,18 @@ int main(int argc, char* argv[]) {
     case CJUMP: {
       ++instruction_pointer;
       if ((int)pop() == -1) {
-	instruction_pointer = memory[instruction_pointer];
+	instruction_pointer = fetch_word(instruction_pointer);
+	printf("jumping to @%du\n", instruction_pointer);
 	continue;
       }
-      break;
+
+      instruction_pointer += WORD_SIZE;
+      continue;
     }
     case CALL: {
-      rpush(instruction_pointer + 2);
-      instruction_pointer = memory[instruction_pointer + 1];
+      ++instruction_pointer;
+      rpush(instruction_pointer + WORD_SIZE);
+      instruction_pointer = fetch_word(instruction_pointer);
       continue;
     }
     case RETURN: {
@@ -235,8 +267,8 @@ int main(int argc, char* argv[]) {
       break;
     }
     case EMIT: {
-      putchar((char)pop());
-      //printf("'%c'\n", (char)pop());
+      //putchar((char)pop());
+      printf("\n-->'%c'\n\n", (char)pop());
       break;
     }
     case EQUALS: {
@@ -260,6 +292,17 @@ int main(int argc, char* argv[]) {
     }
     case RPOP: {
       push(rpop());
+      break;
+    }
+    case BFETCH: {
+      const word address = pop();
+      push(fetch_byte(address));
+      break;
+    }
+    case BSTORE: {
+      puts("bstore!");
+      const word address = pop();
+      store_byte(address, pop() & 0xFF);
       break;
     }
 //    case NATIVE: {

@@ -15,7 +15,7 @@
 
 struct label {
   char name[LABEL_MAX];
-  unsigned int address;
+  word address;
 };
 
 // TODO: Allocate on the heap.
@@ -232,6 +232,17 @@ static int parse_call(struct tokenizer *t, FILE *out) {
   return 0;
 }
 
+static int output_as_bytes(word w, FILE *out) {
+    byte bytes[WORD_SIZE] = {0};
+    word_to_bytes(w, bytes);
+
+    for (unsigned int i = 0; i < WORD_SIZE; ++i)
+      if (fprintf(out, "%d\n", bytes[i]) < 0)
+	return dlt_error("failed to write to file");
+
+    return 0;
+}
+
 static int insert_dictionary_header(char word_name[TOKEN_MAX], FILE *out) {
   // Insert the start label.
   if (fprintf(out, ":%s\n", word_name) < 0)
@@ -260,7 +271,7 @@ static int insert_dictionary_header(char word_name[TOKEN_MAX], FILE *out) {
 
   for (unsigned int i = 0; i < word_len; ++i) {
     if (fprintf(out, "%d\n", (word)word_name[i]) < 0)
-      return dlt_error("faield to write to file");
+      return dlt_error("failed to write to file");
   }
 
   if (fprintf(out, ":_dict%s\n", word_name) < 0)
@@ -294,11 +305,16 @@ static int parse_codeword(struct tokenizer *t, FILE *out) {
       return 0;
     }
 
-    if (fputs(token, out) == EOF) return dlt_error("failed to write to file");
-    if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
+    if (isdigit(token[0]) || token[0] == '-') {
+      const int number = atoi(token);
+      if ((err = output_as_bytes((word)number, out))) return err;
+    } else {
+      if (fputs(token, out) == EOF) return dlt_error("failed to write to file");
+      if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
+    }
     consume_token(t);
   }
-  puts("DAMN");
+
   return parse_error(t, ".end");
 }
 
@@ -323,8 +339,13 @@ static int parse_var(struct tokenizer *t, FILE *out) {
   consume_token(t);
 
   if (next_token(t) <= 0) return parse_error(t, "<var-value>");
-  if (fputs(t->token, out) == EOF) return dlt_error("failed to write to file");
-  if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
+
+  char *token = t->token;
+  if (!isdigit(token[0]) && !(token[0] == '-'))
+    return parse_error(t, "<numeric-literal>");
+  
+  const int number = atoi(token);
+  if ((err = output_as_bytes((word)number, out))) return err;
   consume_token(t);
 
   // Check and consume .end token.
@@ -344,9 +365,20 @@ static int parse_const(struct tokenizer *t, FILE *out) {
   if ((err = insert_dictionary_header(t->token, out))) return err;
   consume_token(t);
 
+  // Output numeric literal as constant on the stack.
   if (next_token(t) <= 0) return parse_error(t, "<const-value>");
-  if (fprintf(out, "const %s\nret\n", t->token) < 0)
-    return dlt_error("failed to write to file");
+
+  if (fputs("const", out) == EOF) return dlt_error("failed to write to file");
+  if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
+
+  char *token = t->token;
+  if (!isdigit(token[0]) && !(token[0] == '-'))
+    return parse_error(t, "<numeric-literal>");
+  
+  const int number = atoi(token);
+  if ((err = output_as_bytes((word)number, out))) return err;
+  if (fputs("ret", out) == EOF) return dlt_error("failed to write to file");
+  if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
   consume_token(t);
 
   // Check and consume .end token.
@@ -367,9 +399,15 @@ static int macro_handler(struct tokenizer *t, FILE *out) {
 
   // Pipe the token to the output file if nothing matches.
   if (is_token_consumed(t)) return 0;
-  
-  if (fputs(t->token, out) == EOF) return dlt_error("failed to write to file");
-  if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
+
+  char *token = t->token;
+  if (isdigit(token[0]) || token[0] == '-') {
+    const int number = atoi(token);
+    if ((err = output_as_bytes((word)number, out))) return err;
+  } else {
+    if (fputs(token, out) == EOF) return dlt_error("failed to write to file");
+    if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
+  }
   consume_token(t);
   
   return 0;
@@ -383,8 +421,9 @@ static int read_label_handler(struct tokenizer *t, FILE *out) {
   
   int err = 0;
   char *token = t->token;
-  if (token[0] != ':') ++address;
-  else err = append_label(token + 1, address);
+  if (token[0] == ':') append_label(token + 1, address);
+  else if (token[0] == '@' && strnlen(token, LABEL_MAX) > 1) address += WORD_SIZE;
+  else ++address;
   
   consume_token(t);
   return err;
@@ -395,16 +434,21 @@ static int resolve_label_handler(struct tokenizer *t, FILE *out) {
 
   char *token = t->token;
   if (token[0] == ':') {
-    fprintf(out, "( %s @ %d )\n", token, address);
+    if (fprintf(out, "( %s @ %d )\n", token, address) < 0)
+      return dlt_error("failed to write to file");
   } else if (token[0] == '@' && strnlen(token, LABEL_MAX) > 1) {
     char *name = token + 1;
     const struct label *const l = find_label(name);
     if (l == NULL)
       return dlt_errorf("line %d: Label '%s' does not exist", t->line_number, name);
 
-    if(fprintf(out, "%d\n", l->address) < 0)
-      return dlt_error("failed to write to file");
-    ++address;
+    if (fprintf(out, "( @%s @ %d -> %d )\n",
+		l->name, address, l->address) < 0)
+            return dlt_error("failed to write to file");
+
+    int err = 0;
+    if ((err = output_as_bytes(l->address, out))) return err;      
+    address += WORD_SIZE;
   } else {
     // Pipe the token to the output file if nothing matches.
     if (fputs(token, out) == EOF) return dlt_error("failed to write to file");
@@ -425,6 +469,9 @@ static int opcode_handler(struct tokenizer *t, FILE *out) {
   int opcode = EXIT;
   if (isdigit(token[0]) || token[0] == '-') {
     opcode = atoi(token);
+//    if (opcode > 127 || opcode < -128)
+//      return dlt_errorf("line %d: '%s' is larger than a single byte",
+//			t->line_number, token);
   } else {
     opcode = name_to_opcode(token);
     if (opcode < 0)
@@ -432,7 +479,8 @@ static int opcode_handler(struct tokenizer *t, FILE *out) {
 			t->line_number, token);
   }
 
-  if (fwrite(&opcode, sizeof(opcode), 1, out) == 0)
+  const byte b_opcode = (byte)opcode;
+  if (fwrite(&b_opcode, sizeof(b_opcode), 1, out) == 0)
     return dlt_error("failed to write binary data to .dopc file");
 
   consume_token(t);
