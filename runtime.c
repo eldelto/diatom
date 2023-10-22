@@ -15,12 +15,13 @@ struct stack {
 };
 
 inline static void stack_push(struct stack* s, word value) {
-  const word index = s->pointer++ % STACK_SIZE;
+  const word index = s->pointer++;
+  if (index >= STACK_SIZE) dlt_fatal_error("stack overflow");
   s->data[index] = value;
 }
 
 inline static word stack_pop(struct stack* s) {
-  const word index = --s->pointer % STACK_SIZE;
+  const word index = --s->pointer;
   if (index < 0) dlt_fatal_error("stack underflow");
   return s->data[index];
 }
@@ -132,8 +133,6 @@ static word fetch_word(word addr) {
   word w = 0;
   for (unsigned int i = 0; i < WORD_SIZE; ++i) {
     word b = (word)fetch_byte(addr + i);
-    printf("fetch: %d @ %d = %d %d << %lu \n", b, addr+i, w,  (b << (WORD_SIZE - (i+1)) * sizeof(byte)),
-      (WORD_SIZE - (i+1)) * 8);
     w |= (b << (WORD_SIZE - (i+1)) * 8);
   }
 
@@ -242,13 +241,11 @@ int main(int argc, char* argv[]) {
     }
     case CJUMP: {
       ++instruction_pointer;
-      if ((int)pop() == -1) {
+      if ((int)pop() == -1)
 	instruction_pointer = fetch_word(instruction_pointer);
-	printf("jumping to @%du\n", instruction_pointer);
-	continue;
-      }
-
-      instruction_pointer += WORD_SIZE;
+      else
+	instruction_pointer += WORD_SIZE;
+      
       continue;
     }
     case CALL: {
@@ -300,7 +297,6 @@ int main(int argc, char* argv[]) {
       break;
     }
     case BSTORE: {
-      puts("bstore!");
       const word address = pop();
       store_byte(address, pop() & 0xFF);
       break;
@@ -313,7 +309,7 @@ int main(int argc, char* argv[]) {
     default: {
       printf("Unknown instruction '%d' at memory location %d - aborting.",
 	     instruction, instruction_pointer);
-      return -1;
+      return EXIT_FAILURE;
     }
     }
 
