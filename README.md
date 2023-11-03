@@ -1,27 +1,27 @@
 
 # Table of Contents
 
-1.  [Diatom](#org01d83ec)
-    1.  [Assembler](#orgf23c6ed)
-        1.  [Comments](#org194ccf3)
-        2.  [Labels & References](#org0c038f9)
-        3.  [Program Entry Point](#org90df790)
-        4.  [Macros](#org4e9a1dd)
-    2.  [Dictionary Layout](#org01e8eed)
-    3.  [Preamble](#org9f80696)
-    4.  [Performance](#org317dee2)
-    5.  [Portability](#org69b63b1)
-    6.  [Features](#org2f385f8)
+1.  [Diatom](#org08014c2)
+    1.  [Assembler](#org999b6a2)
+        1.  [Comments](#orged5d3f1)
+        2.  [Labels & References](#org53aeec3)
+        3.  [Program Entry Point](#org01c6433)
+        4.  [Macros](#orga49ebf0)
+    2.  [Dictionary Layout](#org646d60d)
+    3.  [Preamble](#orgb783310)
+    4.  [Performance](#orgf310ea4)
+    5.  [Portability](#org6c63be1)
+    6.  [Features](#orgf3f344c)
 
 
-<a id="org01d83ec"></a>
+<a id="org08014c2"></a>
 
 # Diatom
 
 A Forth dialect that focuses on portability and simplicity.
 
 
-<a id="orgf23c6ed"></a>
+<a id="org999b6a2"></a>
 
 ## Assembler
 
@@ -30,7 +30,7 @@ translates DiatomVM instructions (`.dasm`) to their respective
 opcodes (`.dopc`).
 
 
-<a id="org194ccf3"></a>
+<a id="orged5d3f1"></a>
 
 ### Comments
 
@@ -48,7 +48,7 @@ beginning/end of line:
       ret
 
 
-<a id="org0c038f9"></a>
+<a id="org53aeec3"></a>
 
 ### Labels & References
 
@@ -73,7 +73,7 @@ would resolve to
     red
 
 
-<a id="org90df790"></a>
+<a id="org01c6433"></a>
 
 ### Program Entry Point
 
@@ -95,7 +95,7 @@ your program you can use a forward reference to a label:
     ...
 
 
-<a id="org4e9a1dd"></a>
+<a id="orga49ebf0"></a>
 
 ### Macros
 
@@ -120,11 +120,6 @@ can also be used in other contexts.
         0
         1
         244
-    
-    -   !<reference>
-    -   .var
-    -   .const
-    -   .codeword
 
 2.  .const
 
@@ -256,7 +251,7 @@ can also be used in other contexts.
         ret
 
 
-<a id="org01e8eed"></a>
+<a id="org646d60d"></a>
 
 ## Dictionary Layout
 
@@ -309,7 +304,7 @@ can also be used in other contexts.
 </table>
 
 
-<a id="org9f80696"></a>
+<a id="orgb783310"></a>
 
 ## Preamble
 
@@ -322,7 +317,7 @@ executed:
 -   Execute main word (default = REPL but overwritable)
 
 
-<a id="org317dee2"></a>
+<a id="orgf310ea4"></a>
 
 ## Performance
 
@@ -343,7 +338,7 @@ just using another language but by applying different design
 principles that focus on the core functionality.
 
 
-<a id="org69b63b1"></a>
+<a id="org6c63be1"></a>
 
 ## Portability
 
@@ -359,7 +354,7 @@ implementation because additional custom software (e.g. assembler)
 is needed for bootstrapping.
 
 
-<a id="org2f385f8"></a>
+<a id="orgf3f344c"></a>
 
 ## Features
 
