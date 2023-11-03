@@ -1,22 +1,262 @@
 
 # Table of Contents
 
-1.  [Diatom](#org450e06b)
-    1.  [Dictionary Layout](#orgb40a98a)
-    2.  [Preamble](#org046e56a)
-    3.  [Performance](#org3062a75)
-    4.  [Portability](#org99a8aa6)
-    5.  [Assembler](#org37df4f2)
+1.  [Diatom](#org01d83ec)
+    1.  [Assembler](#orgf23c6ed)
+        1.  [Comments](#org194ccf3)
+        2.  [Labels & References](#org0c038f9)
+        3.  [Program Entry Point](#org90df790)
+        4.  [Macros](#org4e9a1dd)
+    2.  [Dictionary Layout](#org01e8eed)
+    3.  [Preamble](#org9f80696)
+    4.  [Performance](#org317dee2)
+    5.  [Portability](#org69b63b1)
+    6.  [Features](#org2f385f8)
 
 
-<a id="org450e06b"></a>
+<a id="org01d83ec"></a>
 
 # Diatom
 
 A Forth dialect that focuses on portability and simplicity.
 
 
-<a id="orgb40a98a"></a>
+<a id="orgf23c6ed"></a>
+
+## Assembler
+
+The Diatom assembler (`dasm`) is a simplistic assembler that
+translates DiatomVM instructions (`.dasm`) to their respective
+opcodes (`.dopc`).
+
+
+<a id="org194ccf3"></a>
+
+### Comments
+
+Comments are started with `(` and ended with `)`. Please keep in
+mind that both parantheses need to be surrounded by spaces or
+beginning/end of line:
+
+    ( This is a comment )
+    
+    ( The next function duplicates
+      a given number. )
+    :duplicate
+      dup
+      +
+      ret
+
+
+<a id="org0c038f9"></a>
+
+### Labels & References
+
+The assembler supports basic labels and references (backwards &
+forwards references) that can be used to reference to specific
+memory locations in your program.
+
+Labels are created with `:<name>` and can be referenced with
+`@<name>`. The reference inserts the memory address of the label
+as literal value:
+
+    ( Adds the address of the label to the stack. )
+    :add-own-address ( address = 125 )
+      const
+      @add-own-address
+      ret
+
+would resolve to
+
+    const
+    125
+    red
+
+
+<a id="org90df790"></a>
+
+### Program Entry Point
+
+Upon start the DiatomVM will begin executing instructions from
+the first memory address. To skip directly to the entry point of
+your program you can use a forward reference to a label:
+
+    ( Immediately jump to the start label )
+    const
+    -1
+    cjmp
+    @start
+    
+    ( Other code that shouldn't be executed right away )
+    ...
+    
+    ( Entry point of my program )
+    :start
+    ...
+
+
+<a id="org4e9a1dd"></a>
+
+### Macros
+
+The assembler has a couple of built-in macros that are expanded
+as the first step in the assembly process. Most of them are
+designed to easy the implementation of Forth-like languages but
+can also be used in other contexts.
+
+1.  Literals
+
+    Literal numbers are split into consecutive bytes by the
+    assembler. The number of bytes depends on the configured word
+    size (default = 32 bit = 4 bytes).
+    
+        const
+        500
+    
+    will be expanded to
+    
+        const
+        0
+        0
+        1
+        244
+    
+    -   !<reference>
+    -   .var
+    -   .const
+    -   .codeword
+
+2.  .const
+
+    The `.const` macro defines a constant value that cannot be
+    changed at runtime. The generated instructions will be appended
+    to a Forth-like dictionary but the code can also be called
+    directly.
+    
+    Syntax: `.const <name> <numeric-value> .end`
+    
+        .const
+          max-char
+          255
+        .end
+    
+    will be expanded to
+    
+        :max-char
+          0
+          8
+          109
+          97
+          120
+          45
+          99
+          104
+          97
+          114
+        :_dictmax-char
+          const
+          0
+          0
+          0
+          255
+          ret
+    
+    Calling `max-char` will put the value `255` on the data stack
+    of the virtual machine:
+    
+        call
+        @_dictmax-char
+
+3.  .var
+
+    Variables can be defined with the `.var` macro. In contrast to
+    constants, a variables value can be changed at runtime.
+    
+    Syntax: `.var <name> <numeric-value> .end`
+    
+        .var
+          base
+          10
+        .end
+    
+    will be expanded to
+    
+        :base
+          0
+          4
+          98
+          97
+          115
+          101
+        :_dictbase
+          const
+          @_varbase
+          ret
+        :_varbase
+          0
+          0
+          0
+          10
+    
+    Calling `base` will put the **address** of the variable's memory
+    location on the data stack. This address can then be used to
+    read (`@`) or update (`!`) the variable's value.
+
+4.  .codeword
+
+    Codewords are very specific to Forth-like languages. Codewords
+    are essentially functions (a.k.a. words) consisting of assembly
+    instructions that are registered in the Forth dictionary.
+    
+    Syntax: `.codeword <name> <instructions> .end`
+    
+    The codeword macro also supports a shorthand for calling other
+    words from the dictionary with `!<word-name>`.
+    
+        .const
+          1k
+          1000
+        .end
+        
+        .codeword
+          add-1k
+          !1k
+          +
+        .end
+    
+    will be expanded to
+    
+        ( 1k const )
+        :1k
+        0
+        2
+        49
+        107
+        :_dict1k
+        const
+        0
+        0
+        3
+        232
+        ret
+        
+        ( add-1k word )
+        :add-1k
+        @1k
+        6
+        97
+        100
+        100
+        45
+        49
+        107
+        :_dictadd-1k
+        call @_dict1k
+        +
+        ret
+
+
+<a id="org01e8eed"></a>
 
 ## Dictionary Layout
 
@@ -47,22 +287,29 @@ A Forth dialect that focuses on portability and simplicity.
 
 
 <tr>
-<td class="org-left">name</td>
-<td class="org-right">8</td>
-<td class="org-left">Stores the first 4 chars of the package and the word.</td>
+<td class="org-left">len</td>
+<td class="org-right">1</td>
+<td class="org-left">Length of the name.</td>
 </tr>
 
 
 <tr>
-<td class="org-left">code<sub>segment</sub></td>
-<td class="org-right">N</td>
-<td class="org-left">Pointers to the sub-words.</td>
+<td class="org-left">name</td>
+<td class="org-right">n</td>
+<td class="org-left">Name of the word (1 char / word).</td>
+</tr>
+
+
+<tr>
+<td class="org-left">code-word</td>
+<td class="org-right">1</td>
+<td class="org-left">Pointer to the first word to execute.</td>
 </tr>
 </tbody>
 </table>
 
 
-<a id="org046e56a"></a>
+<a id="org9f80696"></a>
 
 ## Preamble
 
@@ -75,7 +322,7 @@ executed:
 -   Execute main word (default = REPL but overwritable)
 
 
-<a id="org3062a75"></a>
+<a id="org317dee2"></a>
 
 ## Performance
 
@@ -96,7 +343,7 @@ just using another language but by applying different design
 principles that focus on the core functionality.
 
 
-<a id="org99a8aa6"></a>
+<a id="org69b63b1"></a>
 
 ## Portability
 
@@ -112,30 +359,11 @@ implementation because additional custom software (e.g. assembler)
 is needed for bootstrapping.
 
 
-<a id="org37df4f2"></a>
+<a id="org2f385f8"></a>
 
-## Assembler
+## Features
 
-A very simplistic assembler is needed that can replace label
-references with their actual memory location.
-
-Input:
-
-    double:
-    	dup	
-    	add
-    quadruple:
-    	@double
-    	@double
-
-Output:
-
-    dup
-    add
-    const
-    0
-    next
-    const
-    0
-    next
+-   Exception support?
+-   Tail-recursive looping
+-   Integer overflow trapping vs. saturation?
 
