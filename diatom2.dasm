@@ -44,6 +44,43 @@ nop nop
   :emit-word2
 .end
 
+.codeword pow
+  dup const 1 = cjmp @pow-1
+  swap dup rput swap
+:pow-loop
+  dup const 2 < cjmp @pow-end
+  swap
+  rpop dup rput *
+  swap const 1 -
+  const -1 cjmp @pow-loop
+:pow-end
+  drop
+  rpop
+  drop
+  ret
+:pow-1
+  drop
+  drop
+  const 1
+.end
+
+(
+.codeword number?
+  const 48 - 0 9 < > | ( Check for valid range )
+.end
+.codeword number
+  const 0 rput				( Store result on return stack )
+  !word-buffer @ dup
+  const 10 pow swap
+  !word-buffer + b@
+  dup number? ~ cjmp @number-err	( Check for valid range )
+  const 48 - 
+
+:number-err
+  
+.end
+)
+
 ( TODO: Implement 'number'
 .colonword number ???
 )
@@ -64,7 +101,8 @@ nop nop
 )
 
 .const konstantin 77 .end
-.codeword main !word drop !emit-word exit .end
+( .codeword main !word drop !emit-word exit .end )
+.codeword main const 10 const 6 !pow .end
 	   	
 :start
 call

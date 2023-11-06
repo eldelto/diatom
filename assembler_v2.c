@@ -305,7 +305,7 @@ static int parse_codeword(struct tokenizer *t, FILE *out) {
       return 0;
     }
 
-    if (isdigit(token[0]) || token[0] == '-') {
+    if (isdigit(token[0]) || (token[0] == '-' && strnlen(token, TOKEN_MAX) > 1)) {
       const int number = atoi(token);
       if ((err = output_as_bytes((word)number, out))) return err;
     } else {
@@ -401,7 +401,7 @@ static int macro_handler(struct tokenizer *t, FILE *out) {
   if (is_token_consumed(t)) return 0;
 
   char *token = t->token;
-  if (isdigit(token[0]) || token[0] == '-') {
+  if (isdigit(token[0]) || (token[0] == '-' && strnlen(token, TOKEN_MAX) > 1)) {
     const int number = atoi(token);
     if ((err = output_as_bytes((word)number, out))) return err;
   } else {
@@ -467,7 +467,7 @@ static int opcode_handler(struct tokenizer *t, FILE *out) {
   
   char *token = t->token;
   int opcode = EXIT;
-  if (isdigit(token[0]) || token[0] == '-') {
+  if (isdigit(token[0]) || (token[0] == '-' && strnlen(token, TOKEN_MAX) > 1)) {
     opcode = atoi(token);
 //    if (opcode > 127 || opcode < -128)
 //      return dlt_errorf("line %d: '%s' is larger than a single byte",

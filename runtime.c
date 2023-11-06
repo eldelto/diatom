@@ -278,17 +278,21 @@ int main(int argc, char* argv[]) {
       break;
     }
     case LT: {
-      if ((int)pop() >= (int)pop()) push(-1);
+      if ((int)pop() > (int)pop()) push(-1);
       else push(0);
       break;
     }
     case GT: {
-      if ((int)pop() <= (int)pop()) push(-1);
+      if ((int)pop() < (int)pop()) push(-1);
       else push(0);
       break;
     }
     case RPOP: {
       push(rpop());
+      break;
+    }
+    case RPUT: {
+      rpush(pop());
       break;
     }
     case BFETCH: {
