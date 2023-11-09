@@ -295,6 +295,10 @@ int main(int argc, char* argv[]) {
       rpush(pop());
       break;
     }
+    case RPEEK: {
+      push(rpeek());
+      break;
+    }
     case BFETCH: {
       const word address = pop();
       push(fetch_byte(address));

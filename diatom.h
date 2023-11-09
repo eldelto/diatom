@@ -3,7 +3,7 @@
 
 #include "util.h"
 
-#define INSTRUCTION_COUNT 26
+#define INSTRUCTION_COUNT 27
 #define INSTRUCTION_NAME_MAX 10
 #define WORD_NAME_MAX 10
 
@@ -36,6 +36,7 @@ enum instructions {
   GT,
   RPOP,
   RPUT,
+  RPEEK,
   BFETCH,
   BSTORE,
 };
@@ -65,6 +66,7 @@ char instruction_names[INSTRUCTION_COUNT][INSTRUCTION_NAME_MAX] = {
   ">",
   "rpop",
   "rput",
+  "r@",
   "b@",
   "b!",
 };
