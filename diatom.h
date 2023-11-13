@@ -3,12 +3,12 @@
 
 #include "util.h"
 
-#define INSTRUCTION_COUNT 27
+#define INSTRUCTION_COUNT 28
 #define INSTRUCTION_NAME_MAX 10
 #define WORD_NAME_MAX 10
 
 typedef unsigned char byte;
-typedef unsigned int word;
+typedef int word;
 #define WORD_SIZE (sizeof(word) / sizeof(byte))
 
 enum instructions {
@@ -21,6 +21,7 @@ enum instructions {
   SUBTRACT,
   MULTIPLY,
   DIVIDE,
+  MOD,
   DUP,
   DROP,
   SWAP,
@@ -51,6 +52,7 @@ char instruction_names[INSTRUCTION_COUNT][INSTRUCTION_NAME_MAX] = {
   "-",
   "*",
   "/",
+  "%",
   "dup",
   "drop",
   "swap",

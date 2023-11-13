@@ -5,7 +5,7 @@
 #include "util.h"
 
 #define STACK_SIZE  10
-#define MEMORY_SIZE 1000
+#define MEMORY_SIZE 8000
 #define IO_BUFFER_SIZE 4096
 
 /* Stacks */
@@ -212,7 +212,12 @@ int main(int argc, char* argv[]) {
     }
     case DIVIDE: {
       const word value = pop();
-      push(value / pop());
+      push(pop() / value);
+      break;
+    }
+    case MOD: {
+      const word value = pop();
+      push(pop() % value);
       break;
     }
     case DUP: {

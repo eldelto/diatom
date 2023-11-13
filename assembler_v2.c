@@ -265,7 +265,7 @@ static int insert_dictionary_header(char word_name[TOKEN_MAX], FILE *out) {
   memcpy(last_word_label, word_name, sizeof(last_word_label));
 
   // Insert the length and name of the word.
-  const word word_len = strnlen(word_name, TOKEN_MAX);
+  const unsigned int word_len = strnlen(word_name, TOKEN_MAX);
   if (fprintf(out, "%d\n", word_len) < 0)
     return dlt_error("failed to write to file");
 

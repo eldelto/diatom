@@ -67,7 +67,7 @@ nop nop
 .codeword number
   const 0 rput		( Init loop counter )
   const 0 		( Init result )
-
+( TODO: Add checks for invalid chars )
 :number-loop
   !word-buffer @ r@ -	( Calculate offset )
   !word-buffer !+w + b@	( Fetch char )
@@ -78,9 +78,39 @@ nop nop
   const 0      	     	( Indicate no error )
 .end
 
-( TODO: Implement 'number'
-.colonword number ???
-)
+.codeword digit-to-char
+  const 10 %	( Get last digit )
+  const 48 +	( Add '0' to it )
+.end
+
+.codeword digit-count
+  dup const -1 > const 1 +
+  swap
+  
+:digit-count-loop
+  swap const 1 + swap
+  const 10 /
+  dup const 0 = ~ cjmp @digit-count-loop
+  drop
+.end
+
+.codeword last-digit-to-word
+  dup dup
+  !digit-count const 1 -
+  swap !digit-to-char
+  swap !+w !word-buffer + b!
+  const 10 /
+.end
+.codeword number-to-word
+  dup !digit-count	( Get number of digits )
+  !word-buffer !  	( Store future len in word-buffer )
+
+:number-to-word-loop
+  !last-digit-to-word
+  dup const 0 > cjmp @number-to-word-loop
+
+  drop !word-buffer
+.end
 
 ( Built-in variables )
 .var state 0 .end
@@ -98,9 +128,17 @@ nop nop
 )
 
 .const konstantin 77 .end
+
 ( .codeword main !word drop !emit-word exit .end )
 ( .codeword main const 10 const 6 !pow .end )
-.codeword main !word drop const 9999 drop !number drop .end
+( .codeword main !word drop const 9999 drop !number drop .end )
+.codeword main const 34 !number-to-word
+  !word-buffer @
+  !word-buffer !+w b@ emit
+  !word-buffer !+w const 1 + b@ emit
+.end
+
+( TODO: Fix emit-word :( )
 	   	
 :start
 call
