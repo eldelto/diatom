@@ -5,6 +5,7 @@ cjmp
 
 ( Machine words )
 .codeword +w const 4 + .end
+.codeword !+1 dup @ const 1 + swap ! .end
 
 ( Reserve 11 bytes for the buffer of our 'word' word. )
 .var word-buffer 0 .end
@@ -13,9 +14,11 @@ nop nop nop nop
 nop nop
 .var word-cursor 0 .end
 
-.codeword word-cursor+1 !word-cursor @ const 1 + dup !word-cursor ! .end
 .codeword reset-word-cursor const 0 !word-cursor ! .end
-.codeword store-in-word !word-buffer !word-cursor+1 !+w + b! .end
+.codeword store-in-word
+  !word-buffer !word-cursor @ !+w + b!
+  !word-cursor !!+1
+.end
 .codeword finish-word !word-cursor @ !word-buffer ! !reset-word-cursor .end
 .codeword is-blank? const 32 = .end
 .codeword non-blank-key
@@ -31,15 +34,11 @@ nop nop
 
 .var emit-word-cursor 0 .end
 .codeword reset-emit-word-cursor const 0 !emit-word-cursor ! .end
-.codeword emit-word-cursor+1
-  !emit-word-cursor @ const 1 +
-  !emit-word-cursor !
-  !emit-word-cursor @
-.end
 .codeword emit-word
   !reset-emit-word-cursor
-  :emit-word1 !word-buffer @ !emit-word-cursor+1 > ~ cjmp @emit-word2
+  :emit-word1 !word-buffer @ !emit-word-cursor @ > ~ cjmp @emit-word2
   !word-buffer !emit-word-cursor @ !+w + b@ emit
+  !emit-word-cursor !!+1
   const -1 cjmp @emit-word1
   :emit-word2
 .end
@@ -129,14 +128,15 @@ nop nop
 
 .const konstantin 77 .end
 
-( .codeword main !word drop !emit-word exit .end )
+.codeword main !word drop !emit-word exit .end
 ( .codeword main const 10 const 6 !pow .end )
 ( .codeword main !word drop const 9999 drop !number drop .end )
-.codeword main const 34 !number-to-word
+( .codeword main const 34 !number-to-word
   !word-buffer @
-  !word-buffer !+w b@ emit
-  !word-buffer !+w const 1 + b@ emit
-.end
+(  !word-buffer !+w b@ emit )
+(  !word-buffer !+w const 1 + b@ emit )
+  !emit-word
+.end )
 
 ( TODO: Fix emit-word :( )
 	   	
