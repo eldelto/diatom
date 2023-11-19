@@ -167,9 +167,14 @@ nop nop
   !emit-word
 .end )
 
-( TODO: Fix emit-word :( )
-	   	
 :start
 call
 @_dictmain
 exit
+
+( TODO:
+- Figure out how to set here & latest
+- Rename @r to rdup
+- Remove "!" macro and insert calls when it is not a instruction
+- Implement "find"
+)
