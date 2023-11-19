@@ -3,7 +3,7 @@
 
 #include "util.h"
 
-#define INSTRUCTION_COUNT 28
+#define INSTRUCTION_COUNT 30
 #define INSTRUCTION_NAME_MAX 10
 #define WORD_NAME_MAX 10
 
@@ -33,6 +33,8 @@ enum instructions {
   EMIT,
   EQUALS,
   NOT,
+  AND,
+  OR,
   LT,
   GT,
   RPOP,
@@ -64,6 +66,8 @@ char instruction_names[INSTRUCTION_COUNT][INSTRUCTION_NAME_MAX] = {
   "emit",
   "=",
   "~",
+  "&",
+  "|",
   "<",
   ">",
   "rpop",

@@ -282,6 +282,14 @@ int main(int argc, char* argv[]) {
       push(~pop());
       break;
     }
+    case AND: {
+      push(pop() & pop());
+      break;
+    }
+    case OR: {
+      push(pop() | pop());
+      break;
+    }
     case LT: {
       if ((int)pop() > (int)pop()) push(-1);
       else push(0);

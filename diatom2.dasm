@@ -63,18 +63,29 @@ nop nop
   const 1
 .end
 
+.codeword number?
+  dup const 47 > & const 58 <
+.end
+
 .codeword number
   const 0 rput		( Init loop counter )
   const 0 		( Init result )
-( TODO: Add checks for invalid chars )
+( TODO: Handle negative numbers )
 :number-loop
-  !word-buffer @ r@ -	( Calculate offset )
+  !word-buffer @ r@ - const 1 -	( Calculate offset )
   !word-buffer !+w + b@	( Fetch char )
+  dup !number? ~ cjmp @number-err
   const 48 -   	 	( Convert to numeric value )
   const 10 r@ !pow * +	( Add value to result )
   rpop const 1 + rput	( Increase loop counter )
   r@ !word-buffer @ < cjmp @number-loop
   const 0      	     	( Indicate no error )
+  rpop drop
+  ret
+:number-err
+  drop drop
+  const -1
+  rpop drop
 .end
 
 .codeword digit-to-char
@@ -128,9 +139,9 @@ nop nop
 
 .const konstantin 77 .end
 
-.codeword main !word drop !emit-word exit .end
+( .codeword main !word drop !emit-word exit .end )
 ( .codeword main const 10 const 6 !pow .end )
-( .codeword main !word drop const 9999 drop !number drop .end )
+.codeword main !word drop const 9999 drop !number drop .end
 ( .codeword main const 34 !number-to-word
   !word-buffer @
 (  !word-buffer !+w b@ emit )
