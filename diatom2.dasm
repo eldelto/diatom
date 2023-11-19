@@ -67,25 +67,43 @@ nop nop
   dup const 47 > & const 58 <
 .end
 
+.codeword negative-number?
+  !word-buffer !+w b@
+  const 45 =
+.end
+
+.codeword unit
+  cjmp @unit-t
+  const 1
+  ret
+:unit-t
+  const -1
+.end
+
+.codeword minus?
+  const 45 =
+.end
+
 .codeword number
-  const 0 rput		( Init loop counter )
-  const 0 		( Init result )
-( TODO: Handle negative numbers )
+  !negative-number?
+  dup const -1 * rput	( Skip the first char if it is '-' )
+  !unit	       	 	( 1 or -1 if '-' )
+  const 0		( Init result )
 :number-loop
-  !word-buffer @ r@ - const 1 -	( Calculate offset )
-  !word-buffer !+w + b@	( Fetch char )
+  !word-buffer !+w r@ + b@				( Read char at offset r@ )
   dup !number? ~ cjmp @number-err
-  const 48 -   	 	( Convert to numeric value )
-  const 10 r@ !pow * +	( Add value to result )
-  rpop const 1 + rput	( Increase loop counter )
+  const 48 -
+  const 10 !word-buffer @ const 1 - r@ - !pow * +	( Scale digit at offset )
+  rpop const 1 + rput
   r@ !word-buffer @ < cjmp @number-loop
-  const 0      	     	( Indicate no error )
+  *  		  ( Negate if word started with '-' )
+  const 0	  ( 0 to indicate no error )
   rpop drop
   ret
 :number-err
-  drop drop
-  const -1
+  drop drop drop	( Cleanup )
   rpop drop
+  const -1		( -1 to indicate error )
 .end
 
 .codeword digit-to-char
