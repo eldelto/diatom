@@ -142,8 +142,7 @@ nop nop
 
 ( Built-in variables )
 .var state 0 .end
-.var latest 0 .end
-.var here 0 .end
+.var here @here-label .end
 .var base 10 .end
 
 ( Built-in constants
@@ -167,14 +166,23 @@ nop nop
   !emit-word
 .end )
 
+( No word definition shall stand beyond this mark. )
+( Except this one. )
+.var latest @latest .end
+
 :start
 call
 @_dictmain
 exit
 
 ( TODO:
-- Figure out how to set here & latest
+- Support label references for .const & .var
+- Define .var here @end .end
+- Define .var latest @_dictlatest (?) .end
 - Rename @r to rdup
 - Remove "!" macro and insert calls when it is not a instruction
 - Implement "find"
 )
+
+( No code shall reach beyond this point or it will be overwritten. )
+:here-label

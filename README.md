@@ -1,27 +1,27 @@
 
 # Table of Contents
 
-1.  [Diatom](#org08014c2)
-    1.  [Assembler](#org999b6a2)
-        1.  [Comments](#orged5d3f1)
-        2.  [Labels & References](#org53aeec3)
-        3.  [Program Entry Point](#org01c6433)
-        4.  [Macros](#orga49ebf0)
-    2.  [Dictionary Layout](#org646d60d)
-    3.  [Preamble](#orgb783310)
-    4.  [Performance](#orgf310ea4)
-    5.  [Portability](#org6c63be1)
-    6.  [Features](#orgf3f344c)
+1.  [Diatom](#org56ea477)
+    1.  [Assembler](#orgbf19052)
+        1.  [Comments](#org3dc5a81)
+        2.  [Labels & References](#org0df4062)
+        3.  [Program Entry Point](#org1aeb994)
+        4.  [Macros](#org29b2c9f)
+    2.  [Dictionary Layout](#org66076da)
+    3.  [Preamble](#org146b245)
+    4.  [Performance](#orgbe67eb2)
+    5.  [Portability](#org6d08002)
+    6.  [Features](#org89ef696)
 
 
-<a id="org08014c2"></a>
+<a id="org56ea477"></a>
 
 # Diatom
 
 A Forth dialect that focuses on portability and simplicity.
 
 
-<a id="org999b6a2"></a>
+<a id="orgbf19052"></a>
 
 ## Assembler
 
@@ -30,7 +30,7 @@ translates DiatomVM instructions (`.dasm`) to their respective
 opcodes (`.dopc`).
 
 
-<a id="orged5d3f1"></a>
+<a id="org3dc5a81"></a>
 
 ### Comments
 
@@ -48,7 +48,7 @@ beginning/end of line:
       ret
 
 
-<a id="org53aeec3"></a>
+<a id="org0df4062"></a>
 
 ### Labels & References
 
@@ -73,7 +73,7 @@ would resolve to
     red
 
 
-<a id="org01c6433"></a>
+<a id="org1aeb994"></a>
 
 ### Program Entry Point
 
@@ -95,7 +95,7 @@ your program you can use a forward reference to a label:
     ...
 
 
-<a id="orga49ebf0"></a>
+<a id="org29b2c9f"></a>
 
 ### Macros
 
@@ -128,7 +128,7 @@ can also be used in other contexts.
     to a Forth-like dictionary but the code can also be called
     directly.
     
-    Syntax: `.const <name> <numeric-value> .end`
+    Syntax: `.const <name> <numeric-value | label> .end`
     
         .const
           max-char
@@ -167,7 +167,7 @@ can also be used in other contexts.
     Variables can be defined with the `.var` macro. In contrast to
     constants, a variables value can be changed at runtime.
     
-    Syntax: `.var <name> <numeric-value> .end`
+    Syntax: `.var <name> <numeric-value | label> .end`
     
         .var
           base
@@ -251,7 +251,7 @@ can also be used in other contexts.
         ret
 
 
-<a id="org646d60d"></a>
+<a id="org66076da"></a>
 
 ## Dictionary Layout
 
@@ -304,7 +304,7 @@ can also be used in other contexts.
 </table>
 
 
-<a id="orgb783310"></a>
+<a id="org146b245"></a>
 
 ## Preamble
 
@@ -317,7 +317,7 @@ executed:
 -   Execute main word (default = REPL but overwritable)
 
 
-<a id="orgf310ea4"></a>
+<a id="orgbe67eb2"></a>
 
 ## Performance
 
@@ -338,7 +338,7 @@ just using another language but by applying different design
 principles that focus on the core functionality.
 
 
-<a id="org6c63be1"></a>
+<a id="org6d08002"></a>
 
 ## Portability
 
@@ -354,7 +354,7 @@ implementation because additional custom software (e.g. assembler)
 is needed for bootstrapping.
 
 
-<a id="orgf3f344c"></a>
+<a id="org89ef696"></a>
 
 ## Features
 
