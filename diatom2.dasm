@@ -140,6 +140,8 @@ nop nop
   drop !word-buffer
 .end
 
+( TODO: Implement find to return a dictionary pointer )
+
 ( Built-in variables )
 .var state 0 .end
 .var here @here-label .end
@@ -166,7 +168,9 @@ nop nop
   !emit-word
 .end )
 
-( No word definition shall stand beyond this mark. )
+
+
+( !!! No word definition shall stand beyond this mark. !!! )
 ( Except this one. )
 .var latest @latest .end
 
@@ -176,13 +180,11 @@ call
 exit
 
 ( TODO:
-- Support label references for .const & .var
-- Define .var here @end .end
-- Define .var latest @_dictlatest (?) .end
 - Rename @r to rdup
 - Remove "!" macro and insert calls when it is not a instruction
 - Implement "find"
 )
 
-( No code shall reach beyond this point or it will be overwritten. )
+
+( !!! No code shall reach beyond this point or it will be overwritten. !!! )
 :here-label
