@@ -72,7 +72,7 @@ char instruction_names[INSTRUCTION_COUNT][INSTRUCTION_NAME_MAX] = {
   ">",
   "rpop",
   "rput",
-  "r@",
+  "rdup",
   "b@",
   "b!",
 };
