@@ -141,6 +141,16 @@ nop nop
 .end
 
 ( TODO: Implement find to return a dictionary pointer )
+.codeword str=
+  ( Compare length and return false if != )
+  ( Walk through each character and compare them )
+.end
+
+.codeword find
+  ( Fetch next address of word )
+  ( Compare strings )
+  ( If true return address )
+.end
 
 ( Built-in variables )
 .var state 0 .end
