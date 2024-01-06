@@ -4,14 +4,22 @@ cjmp
 @start
 
 ( Machine words )
-.codeword +w const 4 + .end
+.codeword constw const 4 .end
+.codeword +w !constw + .end
+.codeword +1 const 1 + .end
+.codeword -1 const 1 - .end
 .codeword !+1 dup @ const 1 + swap ! .end
 
-( Reserve 11 bytes for the buffer of our 'word' word. )
+( Reserve 32 bytes for the buffer of our 'word' word. )
 .var word-buffer 0 .end
 nop nop nop nop
 nop nop nop nop
-nop nop
+nop nop nop nop
+nop nop nop nop
+nop nop nop nop
+nop nop nop nop
+nop nop nop nop
+nop nop nop nop
 .var word-cursor 0 .end
 
 .codeword reset-word-cursor const 0 !word-cursor ! .end
@@ -140,10 +148,31 @@ nop nop
   drop !word-buffer
 .end
 
+.codeword char-at
+  !-1 !+w + b@
+.end
+
 ( TODO: Implement find to return a dictionary pointer )
-.codeword str=
+.codeword word=
+  dup b@
+  dup rput
+  !word-buffer @
+  = ~ cjmp @word=-false
+
+  rpop
+:word=-loop
+  rput
+  dup rdup + b@
+  !word-buffer rdup !char-at
+  = ~ cjmp @word=-false
   ( Compare length and return false if != )
   ( Walk through each character and compare them )
+  rpop !-1 dup !constw < ~ cjmp @word=-loop
+  
+  drop drop const -1 ret
+  
+:word=-false
+  rpop drop drop const 0
 .end
 
 .codeword find
@@ -170,13 +199,16 @@ nop nop
 
 ( .codeword main !word drop !emit-word exit .end )
 ( .codeword main const 10 const 6 !pow .end )
-.codeword main !word drop const 9999 drop !number drop .end
+( .codeword main !word drop const 9999 drop !number drop .end )
 ( .codeword main const 34 !number-to-word
   !word-buffer @
 (  !word-buffer !+w b@ emit )
 (  !word-buffer !+w const 1 + b@ emit )
   !emit-word
 .end )
+
+.codeword main !word drop
+ const @word-buffer !+w const 9999 drop !word= .end
 
 
 
@@ -190,7 +222,6 @@ call
 exit
 
 ( TODO:
-- Remove "!" macro and insert calls when it is not a instruction
 - Implement "find"
 )
 
