@@ -160,6 +160,7 @@ nop nop nop nop
   = ~ cjmp @word=-false
 
   rpop
+( TODO: Move to mem= word )
 :word=-loop
   rput
   dup rdup + b@
@@ -175,10 +176,17 @@ nop nop nop nop
   rpop drop drop const 0
 .end
 
+.codeword prev-word !+1 @ .end
+
 .codeword find
-  ( Fetch next address of word )
-  ( Compare strings )
-  ( If true return address )
+  !latest
+  
+:find-loop
+  dup const 0 = cjmp @find-end
+  dup !+1 !word= cjmp @find-end
+  !prev-word const -1 cjmp @find-loop
+
+:find-end
 .end
 
 ( Built-in variables )
@@ -207,9 +215,10 @@ nop nop nop nop
   !emit-word
 .end )
 
-.codeword main !word drop
- const @word-buffer !+w const 9999 drop !word= .end
+( .codeword main !word drop
+ const @word-buffer !+w const 9999 drop !word= .end )
 
+.codeword main !latest @ ( !word drop !find ) .end
 
 
 ( !!! No word definition shall stand beyond this mark. !!! )
@@ -222,6 +231,7 @@ call
 exit
 
 ( TODO:
+- Support labels in .var macro
 - Implement "find"
 )
 
