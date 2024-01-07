@@ -28,9 +28,9 @@ nop nop nop nop
   !word-cursor !!+1
 .end
 .codeword finish-word !word-cursor @ !word-buffer ! !reset-word-cursor .end
-.codeword is-blank? const 32 = .end
+.codeword is-blank? const 33 < .end
 .codeword non-blank-key
-  key dup const 32 = ~ cjmp @nbk1
+  key dup !is-blank? ~ cjmp @nbk1
   drop const -1 cjmp @_dictnon-blank-key :nbk1
 .end
 .codeword word
