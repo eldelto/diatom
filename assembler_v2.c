@@ -349,11 +349,15 @@ static int parse_var(struct tokenizer *t, FILE *out) {
   if (next_token(t) <= 0) return parse_error(t, "<var-value>");
 
   char *token = t->token;
-  if (!looks_like_digit(token) && !is_label(token))
+  if (looks_like_digit(token)) {
+    const int number = atoi(token);
+    if ((err = output_as_bytes((word)number, out))) return err;
+  } else if (is_label(token)) {
+    if (fputs(token, out) == EOF) return dlt_error("failed to write to file");
+    if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
+  } else {
     return parse_error(t, "<numeric-literal | label>");
-
-  const int number = atoi(token);
-  if ((err = output_as_bytes((word)number, out))) return err;
+  }
   consume_token(t);
 
   // Check and consume .end token.
@@ -380,14 +384,19 @@ static int parse_const(struct tokenizer *t, FILE *out) {
   if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
 
   char *token = t->token;
-  if (!looks_like_digit(token) && !is_label(token))
+  if (looks_like_digit(token)) {
+    const int number = atoi(token);
+    if ((err = output_as_bytes((word)number, out))) return err;
+  } else if (is_label(token)) {
+    if (fputs(token, out) == EOF) return dlt_error("failed to write to file");
+    if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
+  } else {
     return parse_error(t, "<numeric-literal | label>");
+  }
+  consume_token(t);
 
-  const int number = atoi(token);
-  if ((err = output_as_bytes((word)number, out))) return err;
   if (fputs("ret", out) == EOF) return dlt_error("failed to write to file");
   if (fputs("\n", out) == EOF) return dlt_error("failed to write to file");
-  consume_token(t);
 
   // Check and consume .end token.
   if (next_token(t) <= 0) return parse_error(t, ".end");
