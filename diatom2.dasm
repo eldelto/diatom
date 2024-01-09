@@ -176,14 +176,14 @@ nop nop nop nop
   rpop drop drop const 0
 .end
 
-.codeword prev-word !+1 @ .end
+.codeword prev-word @ .end
 
 .codeword find
-  !latest
+  !latest @
   
 :find-loop
   dup const 0 = cjmp @find-end
-  dup !+1 !word= cjmp @find-end
+  dup !+w !word= cjmp @find-end
   !prev-word const -1 cjmp @find-loop
 
 :find-end
