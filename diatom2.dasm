@@ -189,6 +189,8 @@ nop nop nop nop
 :find-end
 .end
 
+.codeword codeword !+w dup b@ + !+1 .end
+
 ( Built-in variables )
 .var state 0 .end
 .var here @here-label .end
@@ -219,7 +221,7 @@ nop nop nop nop
  const @word-buffer !+w const 9999 drop !word= .end )
 
 ( .codeword main !konstantin !here @ !latest @ .end )
-.codeword main !word drop const 9999 !find .end
+.codeword main !word drop const 9999 !find !codeword .end
 
 
 ( !!! No word definition shall stand beyond this mark. !!! )
@@ -232,8 +234,9 @@ call
 exit
 
 ( TODO:
-- Support labels in .var macro
-- Implement "find"
+- Implement "interpret"
+- Implement ";"
+- Implement ":"
 )
 
 
