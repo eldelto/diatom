@@ -74,7 +74,7 @@ nop nop nop nop
 .end
 
 .codeword number?
-  dup const 47 > & const 58 <
+  dup const 47 > swap const 58 < &
 .end
 
 .codeword negative-number?
@@ -94,6 +94,7 @@ nop nop nop nop
   const 45 =
 .end
 
+( TODO: Handle numbers that are too large )
 .codeword number
   !negative-number?
   dup const -1 * rput	( Skip the first char if it is '-' )
