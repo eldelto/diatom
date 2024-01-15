@@ -259,6 +259,12 @@ int main(int argc, char* argv[]) {
       instruction_pointer = fetch_word(instruction_pointer);
       continue;
     }
+    case SCALL: {
+      ++instruction_pointer;
+      rpush(instruction_pointer);
+      instruction_pointer = pop();
+      continue;
+    }
     case RETURN: {
       instruction_pointer = rpop();
       continue;

@@ -4,6 +4,8 @@ cjmp
 @start
 
 ( Machine words )
+.codeword exit exit .end
+.codeword + + .end
 .codeword constw const 4 .end
 .codeword +w !constw + .end
 .codeword +1 const 1 + .end
@@ -95,7 +97,7 @@ nop nop nop nop
 .codeword number
   !negative-number?
   dup const -1 * rput	( Skip the first char if it is '-' )
-  !unit	       	 	( 1 or -1 if '-' )
+  !unit			( 1 or -1 if '-' )
   const 0		( Init result )
 :number-loop
   !word-buffer !+w rdup + b@				( Read char at offset rdup )
@@ -104,7 +106,7 @@ nop nop nop nop
   const 10 !word-buffer @ const 1 - rdup - !pow * +	( Scale digit at offset )
   rpop const 1 + rput
   rdup !word-buffer @ < cjmp @number-loop
-  *  		  ( Negate if word started with '-' )
+  *		  ( Negate if word started with '-' )
   const 0	  ( 0 to indicate no error )
   rpop drop
   ret
@@ -122,7 +124,7 @@ nop nop nop nop
 .codeword digit-count
   dup const -1 > const 1 +
   swap
-  
+
 :digit-count-loop
   swap const 1 + swap
   const 10 /
@@ -139,7 +141,7 @@ nop nop nop nop
 .end
 .codeword number-to-word
   dup !digit-count	( Get number of digits )
-  !word-buffer !  	( Store future len in word-buffer )
+  !word-buffer !	( Store future len in word-buffer )
 
 :number-to-word-loop
   !last-digit-to-word
@@ -152,7 +154,6 @@ nop nop nop nop
   !-1 !+w + b@
 .end
 
-( TODO: Implement find to return a dictionary pointer )
 .codeword word=
   dup b@
   dup rput
@@ -168,10 +169,10 @@ nop nop nop nop
   = ~ cjmp @word=-false
   ( Compare length and return false if != )
   ( Walk through each character and compare them )
-  rpop !-1 dup !constw < ~ cjmp @word=-loop
-  
+  rpop !-1 dup const 0 < ~ cjmp @word=-loop
+
   drop drop const -1 ret
-  
+
 :word=-false
   rpop drop drop const 0
 .end
@@ -180,16 +181,34 @@ nop nop nop nop
 
 .codeword find
   !latest @
-  
+
 :find-loop
   dup const 0 = cjmp @find-end
   dup !+w !word= cjmp @find-end
   !prev-word const -1 cjmp @find-loop
 
 :find-end
+  swap drop
 .end
 
 .codeword codeword !+w dup b@ + !+1 .end
+
+.codeword interpret
+  !word !find dup const 0 = cjmp @interpret-number
+  const 777 drop
+  !codeword scall
+  const -1 cjmp @_dictinterpret
+
+:interpret-number
+  const 888 drop
+  drop
+  !number
+  cjmp @interpret-error
+  const -1 cjmp @_dictinterpret
+
+:interpret-error
+.end
+
 
 ( Built-in variables )
 .var state 0 .end
@@ -218,10 +237,17 @@ nop nop nop nop
 .end )
 
 ( .codeword main !word drop
- const @word-buffer !+w const 9999 drop !word= .end )
+ const @+1 !+w const 9999 drop !word= .end )
 
 ( .codeword main !konstantin !here @ !latest @ .end )
-.codeword main !word drop const 9999 !find !codeword .end
+( .codeword main !word drop const 9999 !find !codeword .end )
+.codeword main !interpret .end
+( TODO: number breaks on edge cases
+- 111
+- +
+- -
+)
+( .codeword main !word drop !number .end )
 
 
 ( !!! No word definition shall stand beyond this mark. !!! )
@@ -234,6 +260,7 @@ call
 exit
 
 ( TODO:
+- Fix "number"
 - Implement "interpret"
 - Implement ";"
 - Implement ":"
