@@ -4,9 +4,11 @@
 #include "diatom.h"
 #include "util.h"
 
-#define STACK_SIZE  10
+#define STACK_SIZE  20
 #define MEMORY_SIZE 8000
 #define IO_BUFFER_SIZE 4096
+
+//#define DEBUG
 
 /* Stacks */
 struct stack {
@@ -165,12 +167,14 @@ int main(int argc, char* argv[]) {
   while (instruction_pointer < MEMORY_SIZE) {
     const word instruction = memory[instruction_pointer];
 
+#ifdef DEBUG
     printf("ds -> ");
     for (int i = data_stack->pointer - 1; i >= 0; --i)
       printf("%d ", data_stack->data[i]);
     
     printf("| rs -> %d | ip = %d | instr = %s\n",
 	   rpeek(), instruction_pointer, instruction_names[instruction]);
+#endif
 
     switch (instruction) {
     case EXIT: {
@@ -238,10 +242,9 @@ int main(int argc, char* argv[]) {
     case OVER: {
       const word x = pop();
       const word y = pop();
-      const word z = pop();
       push(x);
       push(y);
-      push(z);
+      push(x);
       break;
     }
     case CJUMP: {
@@ -275,8 +278,11 @@ int main(int argc, char* argv[]) {
       break;
     }
     case EMIT: {
-      //putchar((char)pop());
+#ifdef DEBUG
       printf("\n-->'%c'\n\n", (char)pop());
+#else
+      putchar((char)pop());
+#endif
       break;
     }
     case EQUALS: {
