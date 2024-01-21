@@ -6,6 +6,7 @@ cjmp
 ( Machine words )
 .codeword exit exit .end
 .codeword + + .end
+.codeword over over .end
 .codeword constw const 4 .end
 .codeword +w !constw + .end
 .codeword +1 const 1 + .end
@@ -13,6 +14,8 @@ cjmp
 .codeword !+1 dup @ const 1 + swap ! .end
 .codeword 2dup over over .end
 .codeword 2drop drop drop .end
+.codeword newline const 10 emit .end
+.codeword spc const 32 emit .end
 
 ( Reserve 32 bytes for the buffer of our 'word' word. )
 .var word-buffer 0 .end
@@ -157,10 +160,12 @@ nop nop nop nop
   !-1 !+w + b@
 .end
 
-( TODO: Display memory location )
 .codeword mem-view
-  swap dup b@ !number-to-word !emit-word
-  !+1 swap !2dup > ~ cjmp @_dictmem-view
+  swap dup !number-to-word drop !emit-word
+  const 58 emit !spc
+  dup b@ !number-to-word drop !emit-word
+  !newline
+  !+1 swap !2dup < cjmp @_dictmem-view
   !2drop
 .end
 
@@ -252,14 +257,14 @@ nop nop nop nop
 
 ( .codeword main !konstantin !here @ !latest @ .end )
 ( .codeword main !word drop const 9999 !find !codeword .end )
-( .codeword main !interpret .end )
+.codeword main !interpret .end
 ( TODO: number breaks on edge cases
 - 111
 - +
 - -
 )
 ( .codeword main !word drop !number .end )
-.codeword main const 1 b@ !number-to-word !emit-word .end
+( .codeword main const 10 const 20 !mem-view .end )
 
 
 ( !!! No word definition shall stand beyond this mark. !!! )
@@ -272,7 +277,6 @@ call
 exit
 
 ( TODO:
-- Implement "mem-view" to debug memory contents
 - Implement "create"
 - Implement ";"
 - Implement ":"

@@ -242,9 +242,9 @@ int main(int argc, char* argv[]) {
     case OVER: {
       const word x = pop();
       const word y = pop();
-      push(x);
       push(y);
       push(x);
+      push(y);
       break;
     }
     case CJUMP: {
