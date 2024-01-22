@@ -9,9 +9,9 @@ cjmp
 .codeword over over .end
 .codeword constw const 4 .end
 .codeword +w !constw + .end
-.codeword +1 const 1 + .end
-.codeword -1 const 1 - .end
-.codeword !+1 dup @ const 1 + swap ! .end
+.codeword 1+ const 1 + .end
+.codeword 1- const 1 - .end
+.codeword !1+ dup @ const 1 + swap ! .end
 .codeword 2dup over over .end
 .codeword 2drop drop drop .end
 .codeword newline const 10 emit .end
@@ -32,7 +32,7 @@ nop nop nop nop
 .codeword reset-word-cursor const 0 !word-cursor ! .end
 .codeword store-in-word
   !word-buffer !word-cursor @ !+w + b!
-  !word-cursor !!+1
+  !word-cursor !!1+
 .end
 .codeword finish-word !word-cursor @ !word-buffer ! !reset-word-cursor .end
 .codeword is-blank? const 33 < .end
@@ -53,7 +53,7 @@ nop nop nop nop
   !reset-emit-word-cursor
   :emit-word1 !word-buffer @ !emit-word-cursor @ > ~ cjmp @emit-word2
   !word-buffer !emit-word-cursor @ !+w + b@ emit
-  !emit-word-cursor !!+1
+  !emit-word-cursor !!1+
   const -1 cjmp @emit-word1
   :emit-word2
 .end
@@ -157,15 +157,19 @@ nop nop nop nop
 .end
 
 .codeword char-at
-  !-1 !+w + b@
+  !1- !+w + b@
+.end
+
+.codeword emit-number
+  !number-to-word drop !emit-word
 .end
 
 .codeword mem-view
-  swap dup !number-to-word drop !emit-word
+  swap dup !emit-number
   const 58 emit !spc
-  dup b@ !number-to-word drop !emit-word
+  dup b@ !emit-number
   !newline
-  !+1 swap !2dup < cjmp @_dictmem-view
+  !1+ swap !2dup < cjmp @_dictmem-view
   !2drop
 .end
 
@@ -185,7 +189,7 @@ nop nop nop nop
   = ~ cjmp @word=-false
   ( Compare length and return false if != )
   ( Walk through each character and compare them )
-  rpop !-1 dup const 0 < ~ cjmp @word=-loop
+  rpop !1- dup const 0 < ~ cjmp @word=-loop
 
   drop drop const -1 ret
 
@@ -207,7 +211,7 @@ nop nop nop nop
   swap drop
 .end
 
-.codeword codeword !+w dup b@ + !+1 .end
+.codeword codeword !+w dup b@ + !1+ .end
 
 .codeword interpret
   !word !find dup const 0 = cjmp @interpret-number
@@ -240,7 +244,11 @@ nop nop nop nop
 # F_LENMASK       The length mask in the flags/len byte.
 )
 
-.const konstantin 77 .end
+
+.codeword create
+
+.end
+
 
 ( .codeword main !word drop !emit-word exit .end )
 ( .codeword main const 10 const 6 !pow .end )
@@ -255,6 +263,7 @@ nop nop nop nop
 ( .codeword main !word drop
  const @+1 !+w const 9999 drop !word= .end )
 
+.const konstantin 77 .end
 ( .codeword main !konstantin !here @ !latest @ .end )
 ( .codeword main !word drop const 9999 !find !codeword .end )
 .codeword main !interpret .end
@@ -277,6 +286,10 @@ call
 exit
 
 ( TODO:
+- Implement mem=
+- Implement memcpy
+- Make word-buffer only use a single byte for the length so it
+  can be copied to the end of the dictionary
 - Implement "create"
 - Implement ";"
 - Implement ":"
