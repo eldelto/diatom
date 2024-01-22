@@ -16,6 +16,8 @@ cjmp
 .codeword 2drop drop drop .end
 .codeword newline const 10 emit .end
 .codeword spc const 32 emit .end
+.codeword true const -1 .end
+.codeword false const 0 .end
 
 ( Reserve 32 bytes for the buffer of our 'word' word. )
 .var word-buffer 0 .end
@@ -106,12 +108,12 @@ nop nop nop nop
   !unit			( 1 or -1 if '-' )
   const 0		( Init result )
 :number-loop
-  !word-buffer !+w rdup + b@				( Read char at offset rdup )
+  !word-buffer !+w rpeek + b@				( Read char at offset rpeek )
   dup !number? ~ cjmp @number-err
   const 48 -
-  const 10 !word-buffer @ const 1 - rdup - !pow * +	( Scale digit at offset )
+  const 10 !word-buffer @ const 1 - rpeek - !pow * +	( Scale digit at offset )
   rpop const 1 + rput
-  rdup !word-buffer @ < cjmp @number-loop
+  rpeek !word-buffer @ < cjmp @number-loop
   *		  ( Negate if word started with '-' )
   const 0	  ( 0 to indicate no error )
   rpop drop
@@ -184,8 +186,8 @@ nop nop nop nop
 ( TODO: Move to mem= word )
 :word=-loop
   rput
-  dup rdup + b@
-  !word-buffer rdup !char-at
+  dup rpeek + b@
+  !word-buffer rpeek !char-at
   = ~ cjmp @word=-false
   ( Compare length and return false if != )
   ( Walk through each character and compare them )
@@ -229,6 +231,19 @@ nop nop nop nop
 :interpret-error
 .end
 
+( a b len -- bool )
+.codeword mem=
+  rput !false
+:mem=-loop
+  rpop !1- dup rput const 0 < cjmp @mem=-end
+  drop
+  over rpeek + b@
+  over rpeek + b@
+  = dup cjmp @mem=-loop
+    
+:mem=-end
+rpop drop rput drop drop rpop
+.end
 
 ( Built-in variables )
 .var state 0 .end
@@ -245,6 +260,7 @@ nop nop nop nop
 )
 
 
+( TODO: Implement )
 .codeword create
 
 .end
