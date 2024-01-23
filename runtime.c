@@ -8,7 +8,7 @@
 #define MEMORY_SIZE 8000
 #define IO_BUFFER_SIZE 4096
 
-#define DEBUG
+//#define DEBUG
 
 /* Stacks */
 struct stack {

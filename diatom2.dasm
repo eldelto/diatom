@@ -166,12 +166,40 @@ nop nop nop nop
   !number-to-word drop !emit-word
 .end
 
+( a b len -- bool )
+.codeword mem=
+  rput !false
+:mem=-loop
+  rpop !1- dup rput const 0 < cjmp @mem=-end
+  drop
+  over rpeek + b@
+  over rpeek + b@
+  = dup cjmp @mem=-loop
+
+:mem=-end
+rpop drop rput drop drop rpop
+.end
+
+( src dest len -- )
+.codeword memcpy
+  !1+ rput
+:memcpy-loop
+  rpop !1- dup rput const 0 < cjmp @memcpy-end
+  over rpeek + b@
+  over rpeek + b!
+  !true cjmp @memcpy-loop
+
+:memcpy-end
+rpop drop drop
+.end
+
+( start end -- )
 .codeword mem-view
   swap dup !emit-number
   const 58 emit !spc
   dup b@ !emit-number
   !newline
-  !1+ swap !2dup < cjmp @_dictmem-view
+  !1+ swap !2dup > ~ cjmp @_dictmem-view
   !2drop
 .end
 
@@ -183,7 +211,7 @@ nop nop nop nop
   = ~ cjmp @word=-false
 
   rpop
-( TODO: Move to mem= word )
+( TODO: Use mem= )
 :word=-loop
   rput
   dup rpeek + b@
@@ -229,20 +257,6 @@ nop nop nop nop
   const -1 cjmp @_dictinterpret
 
 :interpret-error
-.end
-
-( a b len -- bool )
-.codeword mem=
-  rput !false
-:mem=-loop
-  rpop !1- dup rput const 0 < cjmp @mem=-end
-  drop
-  over rpeek + b@
-  over rpeek + b@
-  = dup cjmp @mem=-loop
-    
-:mem=-end
-rpop drop rput drop drop rpop
 .end
 
 ( Built-in variables )
