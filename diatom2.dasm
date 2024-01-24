@@ -275,8 +275,22 @@ rpop drop drop
 
 
 ( TODO: Implement )
-.codeword create
+( Creates the header for a new word at the end of the dictionary.
 
+                                            +-- Afterwards, HERE points here.
+                                            |
+                                            V
+ +---------+---+---+---+---+---+---+---+---+
+ | LINK    | 6 | D | O | U | B | L | E | 0 |
+ +---------+---+---+---+---+---+---+---+---+
+            len                         pad
+)
+( -- )
+( TODO: Need to modify memcpy to take src len dest as params )
+.codeword create
+!word !here @ !last !
+dup b@ !here !w+ !memcpy
+!here !w+ !word-buffer @ + !here !
 .end
 
 
