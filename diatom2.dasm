@@ -311,13 +311,16 @@ rpop drop drop drop
 )
 ( -- )
 .codeword create
-!here @ !latest @ swap !
-!word-buffer const 3 + !here @ !w+ !word-buffer @ !memcpy
-!here dup @ !latest !
-dup dup @ !w+ dup b@ + !1+ swap !
+  !here @ !latest @ swap !
+  !word-buffer const 3 + !here @ !w+ !word-buffer @ !memcpy
+  !here dup @ !latest !
+  dup dup @ !w+ dup b@ + !1+ swap !
+.end
 
-( dup b@ !here @ !w+ swap !memcpy
-!here @ !w+ !word-buffer @ + !here ! )
+( n -- )
+.codeword ,
+  !here @ !
+  !here dup @ !w+ swap !
 .end
 
 

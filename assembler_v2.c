@@ -259,8 +259,8 @@ static int insert_dictionary_header(char word_name[TOKEN_MAX], FILE *out) {
   // Insert the address of the previous word.
   static char last_word_label[LABEL_MAX] = "";
   if (last_word_label[0] == '\0') {
-    if (fputs("0\n", out) < 0)
-      return dlt_error("failed to write to file");
+    int err = 0;
+    if ((err = output_as_bytes(0, out))) return err;
   } else {
     char dict_label[LABEL_MAX] = "@";
     strlcat(dict_label, last_word_label, sizeof(dict_label));
