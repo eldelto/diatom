@@ -323,6 +323,15 @@ rpop drop drop drop
   !here dup @ !w+ swap !
 .end
 
+( -- )
+.codeword [
+  !false !state !
+.end
+
+( -- )
+.codeword ]
+  !true !state !
+.end
 
 ( .codeword main !word drop !emit-word exit .end )
 ( .codeword main const 10 const 6 !pow .end )
