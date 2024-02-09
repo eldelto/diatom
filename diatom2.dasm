@@ -188,7 +188,8 @@ nop nop nop nop
   !1- !w+ + b@
 .end
 
-.codeword emit-number
+( TODO: Doesn't properly print negative numbers. )
+.codeword .
   !number-to-word drop !emit-word
 .end
 
@@ -221,9 +222,9 @@ rpop drop drop drop
 
 ( start end -- )
 .codeword mem-view
-  swap dup !emit-number
+  swap dup !.
   const 58 emit !spc
-  dup b@ !emit-number
+  dup b@ !.
   !newline
   !1+ swap !2dup > ~ cjmp @_dictmem-view
   !2drop
@@ -331,6 +332,12 @@ rpop drop drop drop
 ( -- )
 .codeword ]
   !true !state !
+.end
+
+.codeword :
+  !word !create
+  ( append 'ret' instruction )
+  !]
 .end
 
 ( .codeword main !word drop !emit-word exit .end )
