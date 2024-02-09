@@ -230,7 +230,6 @@ rpop drop drop drop
   !2drop
 .end
 
-( TODO: Implement find to return a dictionary pointer )
 .codeword word=
   dup b@
   dup rput
@@ -299,7 +298,6 @@ rpop drop drop drop
 )
 
 
-( TODO: Implement )
 ( Creates the header for a new word at the end of the dictionary.
 
                                             +-- Afterwards, HERE points here.
@@ -336,7 +334,9 @@ rpop drop drop drop
 
 .codeword :
   !word !create
-  ( append 'ret' instruction )
+  ( 2 is equal to the RET instruction )
+  const 2 !here b!
+  !here !1+
   !]
 .end
 
@@ -357,11 +357,6 @@ rpop drop drop drop
 ( .codeword main !konstantin !here @ !latest @ .end )
 ( .codeword main !word drop const 9999 !find !codeword .end )
 .codeword main !interpret .end
-( TODO: number breaks on edge cases
-- 111
-- +
-- -
-)
 ( .codeword main !word drop !number .end )
 ( .codeword main const 10 const 20 !mem-view .end )
 
@@ -377,8 +372,10 @@ call
 exit
 
 ( TODO:
-- Implement ";"
 - Implement ":"
+- Implement "immediate"
+- Change find to ignore the immediate bit
+- Implement ";"
 )
 
 

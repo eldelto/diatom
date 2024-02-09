@@ -14,6 +14,7 @@ typedef int word;
 enum instructions {
   EXIT,
   NOP,
+  RETURN,
   CONST,
   FETCH,
   STORE,
@@ -29,7 +30,6 @@ enum instructions {
   CJUMP,
   CALL,
   SCALL,
-  RETURN,
   KEY,
   EMIT,
   EQUALS,
@@ -48,6 +48,7 @@ enum instructions {
 char instruction_names[INSTRUCTION_COUNT][INSTRUCTION_NAME_MAX] = {
   "exit",
   "nop",
+  "ret",
   "const",
   "@",
   "!",
@@ -63,7 +64,6 @@ char instruction_names[INSTRUCTION_COUNT][INSTRUCTION_NAME_MAX] = {
   "cjmp",
   "call",
   "scall",
-  "ret",
   "key",
   "emit",
   "=",
