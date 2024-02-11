@@ -372,6 +372,8 @@ call
 exit
 
 ( TODO:
+- Reimplement "word=" based on "mem=" while ignoring the
+  most-significant bit as this will be used as the immediate flag.
 - Implement ":"
 - Implement "immediate"
 - Change find to ignore the immediate bit
