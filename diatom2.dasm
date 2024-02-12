@@ -328,6 +328,14 @@ rpop drop drop drop
   !]
 .end
 
+( -- )
+.codeword immediate
+  !latest dup 
+  @ const 128 |
+  swap !
+.end
+
+
 ( .codeword main !word drop !emit-word exit .end )
 ( .codeword main const 10 const 6 !pow .end )
 ( .codeword main !word drop const 9999 drop !number drop .end )
@@ -360,14 +368,11 @@ call
 exit
 
 ( TODO:
-- Reimplement "word=" based on "mem=" while ignoring the
-  most-significant bit as this will be used as the immediate flag.
 - Implement ":"
-- Implement "immediate"
-- Change find to ignore the immediate bit
 - Implement ";"
 )
 
 
 ( !!! No code shall reach beyond this point or it will be overwritten. !!! )
 :here-label
+
