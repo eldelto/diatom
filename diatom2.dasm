@@ -230,27 +230,15 @@ rpop drop drop drop
   !2drop
 .end
 
+( addr -- bool )
 .codeword word=
-  dup b@
-  dup rput
-  !word-buffer @
-  = ~ cjmp @word=-false
-
-  rpop
-( TODO: Use mem= )
-:word=-loop
-  rput
-  dup rpeek + b@
-  !word-buffer rpeek !char-at
-  = ~ cjmp @word=-false
-  ( Compare length and return false if != )
-  ( Walk through each character and compare them )
-  rpop !1- dup const 0 < ~ cjmp @word=-loop
-
-  drop drop const -1 ret
-
-:word=-false
-  rpop drop drop const 0
+  ( The most significant bit is the immediate flag and we want to ignore it. )
+  dup !1+
+  swap b@ const 127 &
+  !word-buffer !w+
+  swap
+  const 4444 drop
+  !mem=
 .end
 
 .codeword prev-word @ .end
@@ -351,7 +339,7 @@ rpop drop drop drop
 .end )
 
 ( .codeword main !word drop
- const @+1 !w+ const 9999 drop !word= .end )
+ const @1+ !w+ const 9999 drop !word= .end )
 
 .const konstantin 77 .end
 ( .codeword main !konstantin !here @ !latest @ .end )
