@@ -171,7 +171,7 @@ int main(int argc, char* argv[]) {
     printf("ds -> ");
     for (int i = data_stack->pointer - 1; i >= 0; --i)
       printf("%d ", data_stack->data[i]);
-    
+
     printf("| rs -> %d | ip = %d | instr = %s\n",
 	   rpeek(), instruction_pointer, instruction_names[instruction]);
 #endif
@@ -180,7 +180,7 @@ int main(int argc, char* argv[]) {
     case EXIT: {
       puts("\nVM exited normally");
       return 0;
-    } 
+    }
     case NOP: {
       break;
     }
@@ -253,7 +253,7 @@ int main(int argc, char* argv[]) {
 	instruction_pointer = fetch_word(instruction_pointer);
       else
 	instruction_pointer += WORD_SIZE;
-      
+
       continue;
     }
     case CALL: {

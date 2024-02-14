@@ -230,6 +230,8 @@ rpop drop drop drop
   !2drop
 .end
 
+( Takes the address past the prev-word pointer and compares it to the value
+stored in 'word-buffer'. )
 ( addr -- bool )
 .codeword word=
   ( The most significant bit is the immediate flag and we want to ignore it. )
@@ -253,13 +255,29 @@ rpop drop drop drop
 
 :find-end
   swap drop
+  const 7777 drop
 .end
 
-.codeword codeword !w+ dup b@ + !1+ .end
+( Takes the start address of a word and returns the addres of its code word. )
+( addr -- addr )
+.codeword codeword
+  !w+ dup b@
+  const 127 & ( Ignore the immediate flag. )
+  + !1+
+.end
 
 .codeword interpret
   !word !find dup const 0 = cjmp @interpret-number
-  !codeword scall
+  dup !codeword
+  swap !immediate? ~
+  !state @ & cjmp @interpret-compile
+
+( Interpret the word. )
+  scall
+  const -1 cjmp @_dictinterpret
+
+:interpret-compile
+  !,
   const -1 cjmp @_dictinterpret
 
 :interpret-number
@@ -340,9 +358,14 @@ rpop drop drop drop
 ( Sets the immediate flag of the latest word. )
 ( -- )
 .codeword immediate
-  !latest dup 
-  @ const 128 |
-  swap !
+  !latest @ !w+ dup
+  b@ const 128 |
+  swap b!
+.end
+
+.codeword immediate?
+  !w+ b@ const 128 &
+  const 128 =
 .end
 
 ( Appends 'ret' and ends compilation. )

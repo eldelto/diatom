@@ -11,7 +11,7 @@
 #define TOKEN_MAX 30
 #define LABEL_MAX TOKEN_MAX + 10
 #define LINE_MAX 90
-#define LABELS_MAX 200
+#define LABELS_MAX 250
 
 struct label {
   char name[LABEL_MAX];
@@ -28,15 +28,15 @@ struct label labels[LABELS_MAX] = {
 
 static size_t label_offset = 0;
 static int append_label(char name[LABEL_MAX], unsigned int address) {
+  if (label_offset >= (LABELS_MAX - 1))
+    return dlt_error("maximum number of labels reached");
+
   struct label l = {
     .name = "",
     .address = address,
   };
   strlcpy(l.name, name, LABEL_MAX);
   labels[label_offset] = l;
-
-  if (label_offset == (LABELS_MAX - 1))
-    return dlt_error("maximum number of labels reached");
 
   ++label_offset;
   return 0;
@@ -438,7 +438,9 @@ static int read_label_handler(struct tokenizer *t, FILE *out) {
 
   int err = 0;
   char *token = t->token;
-  if (token[0] == ':') append_label(token + 1, address);
+  if (token[0] == ':') {
+    if ((err = append_label(token + 1, address))) return err;
+  }
   else if (is_label(token)) address += WORD_SIZE;
   else ++address;
 
