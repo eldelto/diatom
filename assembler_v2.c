@@ -251,7 +251,9 @@ static bool is_label(char *token) {
   return token[0] == '@' && strnlen(token, TOKEN_MAX) > 1;
 }
 
-static int insert_dictionary_header(char word_name[TOKEN_MAX], FILE *out) {
+static int insert_dictionary_header(char word_name[TOKEN_MAX],
+                                    bool immediate,
+                                    FILE *out) {
   // Insert the start label.
   if (fprintf(out, ":%s\n", word_name) < 0)
     return dlt_error("failed to write to file");
@@ -274,7 +276,12 @@ static int insert_dictionary_header(char word_name[TOKEN_MAX], FILE *out) {
 
   // Insert the length and name of the word.
   const unsigned int word_len = strnlen(word_name, TOKEN_MAX);
-  if (fprintf(out, "%d\n", word_len) < 0)
+
+  // Set the most significant bit to 1 if immediate.
+  unsigned int header_word_len = word_len;
+  if (immediate) header_word_len |= 128;
+
+  if (fprintf(out, "%d\n", header_word_len) < 0)
     return dlt_error("failed to write to file");
 
   for (unsigned int i = 0; i < word_len; ++i) {
@@ -289,12 +296,16 @@ static int insert_dictionary_header(char word_name[TOKEN_MAX], FILE *out) {
 }
 
 static int parse_codeword(struct tokenizer *t, FILE *out) {
-  if (!dlt_string_equals(t->token, ".codeword")) return 0;
+  bool immediate = false;
+
+  if (dlt_string_equals(t->token, ".codeword"));
+  else if (dlt_string_equals(t->token, ".immediate-codeword")) immediate = true;
+  else return 0;
   consume_token(t);
 
   int err = 0;
   if (next_token(t) <= 0) return parse_error(t, "<codeword-name>");
-  if ((err = insert_dictionary_header(t->token, out))) return err;
+  if ((err = insert_dictionary_header(t->token, immediate, out))) return err;
   consume_token(t);
 
   // Resolve the remaining entries.
@@ -332,7 +343,7 @@ static int parse_var(struct tokenizer *t, FILE *out) {
 
   int err = 0;
   if (next_token(t) <= 0) return parse_error(t, "<var-name>");
-  if ((err = insert_dictionary_header(t->token, out))) return err;
+  if ((err = insert_dictionary_header(t->token, false, out))) return err;
 
   // Put the variable's address on the data stack and return.
   if (fprintf(out,
@@ -374,7 +385,7 @@ static int parse_const(struct tokenizer *t, FILE *out) {
 
   int err = 0;
   if (next_token(t) <= 0) return parse_error(t, "<const-name>");
-  if ((err = insert_dictionary_header(t->token, out))) return err;
+  if ((err = insert_dictionary_header(t->token, false, out))) return err;
   consume_token(t);
 
   // Output numeric literal as constant on the stack.

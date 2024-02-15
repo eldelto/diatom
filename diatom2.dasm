@@ -357,7 +357,7 @@ stored in 'word-buffer'. )
 
 ( Sets the immediate flag of the latest word. )
 ( -- )
-.codeword immediate
+.immediate-codeword immediate
   !latest @ !w+ dup
   b@ const 128 |
   swap b!
@@ -370,7 +370,7 @@ stored in 'word-buffer'. )
 
 ( Appends 'ret' and ends compilation. )
 ( -- )
-.codeword ; !immediate
+.immediate-codeword ;
   ( 2 is equal to the RET instruction )
   const 2 !b,
   ![
